@@ -185,16 +185,28 @@ const App = () => {
   const [calculatedDistance, setCalculatedDistance] = useState(null);
   const [distanceInterpretation, setDistanceInterpretation] = useState('');
 
+  // Screen Width Responsive State Monitor Loop
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
   const stageRef = useRef(null);
   const containerRef = useRef(null);
   const componentRef = useRef(null);
   const distanceRepRef = useRef(null);
 
-  // Sync state cleanly into a mutable reference so hooks can read it dynamically
   const isSpinningRef = useRef(isSpinning);
   useEffect(() => {
     isSpinningRef.current = isSpinning;
   }, [isSpinning]);
+
+  // Track window resizing event states dynamically
+  useEffect(() => {
+    const handleWindowResize = () => {
+      setWindowWidth(window.innerWidth);
+      stageRef.current?.handleResize();
+    };
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, []);
 
   const currentDetails = dynamicDetails || MOLECULE_DATABASE[selectedMol] || {
     category: 'Live Registry',
@@ -229,7 +241,6 @@ const App = () => {
         fogFar: 100
       });
 
-      // Force view and layout computation right after mounting to prevent blank canvas issues
       setTimeout(() => {
         if (stageRef.current) {
           stageRef.current.handleResize();
@@ -264,15 +275,10 @@ const App = () => {
           setHoveredAtom(null);
         }
       });
-
-      // Production Resize Monitor Loop
-      const handleResize = () => stageRef.current?.handleResize();
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
 
-  // 2. Clear & Redraw Metric Measurement Layers with Dynamic Interpretation
+  // 2. Clear & Redraw Metric Measurement Layers
   useEffect(() => {
     if (distanceRepRef.current && componentRef.current) {
       try {
@@ -330,7 +336,7 @@ const App = () => {
     }
   }, [selectedAtoms]);
 
-  // 3. Asynchronous Data Ingestion Engine & Structure Drawing (with 2D/3D automatic fallbacks)
+  // 3. Asynchronous Data Ingestion Engine & Structure Drawing
   useEffect(() => {
     if (!stageRef.current) return;
 
@@ -355,7 +361,6 @@ const App = () => {
         }
 
         if (targetCid) {
-          // Absolute secure connection string to bypass mixed-content blocks on hosted pages
           const threeDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
           
           try {
@@ -401,7 +406,7 @@ const App = () => {
       });
       
       stageRef.current.autoView();
-      stageRef.current.handleResize(); // Force dimensions to recalculate on layout draw
+      stageRef.current.handleResize();
       setIsLoading(false);
       
       if (isSpinningRef.current) {
@@ -473,8 +478,10 @@ const App = () => {
     return MOLECULE_DATABASE[name].category === activeTab;
   });
 
+  const isMobile = windowWidth < 1024;
+
   return (
-    <div style={styles.appContainer}>
+    <div style={{...styles.appContainer, height: isMobile ? 'auto' : '100vh', overflowY: isMobile ? 'auto' : 'hidden'}}>
       <header style={styles.topHeader}>
         <div style={styles.brandGroup}>
           <div style={styles.logoBadge}>⚛️</div>
@@ -483,14 +490,16 @@ const App = () => {
             <p style={styles.appSubtitle}>High-Fidelity Bio-Spatial Analytics & Lattice Mapping</p>
           </div>
         </div>
-        <div style={styles.headerRightMenu}>
-          <div style={styles.statusPill}><span style={styles.pulseDot}></span>SYSTEM ENGINE ONLINE</div>
-        </div>
+        {!isMobile && (
+          <div style={styles.headerRightMenu}>
+            <div style={styles.statusPill}><span style={styles.pulseDot}></span>SYSTEM ENGINE ONLINE</div>
+          </div>
+        )}
       </header>
 
-      <div style={styles.workspace}>
+      <div style={{...styles.workspace, flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden'}}>
         {/* Left Side Sidebar Panel */}
-        <aside style={styles.leftSidebar}>
+        <aside style={{...styles.leftSidebar, width: isMobile ? '100%' : '310px', boxSizing: 'border-box', borderRight: isMobile ? 'none' : '1px solid #1f242c', borderBottom: isMobile ? '1px solid #1f242c' : 'none'}}>
           <div style={styles.sidebarLabel}>Compound Lookup Matrix</div>
           <input 
             type="text" 
@@ -510,7 +519,7 @@ const App = () => {
           </div>
 
           <div style={styles.sidebarLabel}>Lattice Asset Registry ({filteredMolecules.length})</div>
-          <div style={styles.itemScrollList}>
+          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '200px' : 'none'}}>
             {filteredMolecules.map(name => (
               <div key={name} onClick={() => { setDynamicDetails(null); setSelectedMol(name); }} style={selectedMol === name && !dynamicDetails ? styles.activeCard : styles.inactiveCard}>
                 <div style={styles.cardIcon}>⚡</div>
@@ -524,16 +533,18 @@ const App = () => {
         </aside>
 
         {/* Center Main WebGL Viewport Wrapper */}
-        <main style={styles.viewportWrapper}>
+        <main style={{...styles.viewportWrapper, height: isMobile ? '450px' : 'auto', minHeight: isMobile ? '450px' : 'none'}}>
           <div style={styles.canvasMetaBlock}>
             <span style={styles.categoryTag}>{currentDetails.category.toUpperCase()}</span>
             <h2 style={styles.mainCanvasTitle}>{selectedMol.toUpperCase()}</h2>
             <p style={styles.mainCanvasSubtitle}>{currentDetails.sub}</p>
           </div>
 
-          <div style={styles.floatingHelpBadge}>
-            ⚙️ OPERATIONAL: Left-click + drag mouse array to rotate lattice space. Choose any 2 atoms sequentially to render distance metrics.
-          </div>
+          {!isMobile && (
+            <div style={styles.floatingHelpBadge}>
+              ⚙️ OPERATIONAL: Left-click + drag mouse array to rotate lattice space. Choose any 2 atoms sequentially to render distance metrics.
+            </div>
+          )}
 
           {/* Real-Time Element Node Hover Tooltip HUD */}
           {hoveredAtom && (
@@ -556,24 +567,21 @@ const App = () => {
           <div ref={containerRef} style={styles.canvasTarget}></div>
 
           {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
-          <div style={styles.floatingControlsDock}>
+          <div style={{...styles.floatingControlsDock, width: isMobile ? '90%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
             <div style={styles.renderToggleGroup}>
               <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
               <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
-              <button onClick={() => setRenderStyle('licorice')} style={renderStyle === 'licorice' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Licorice</button>
             </div>
             <div style={{width: '1px', background: '#21262d', margin: '0 4px'}} />
-            <button onClick={() => triggerCameraAction('zoomIn')} style={styles.dockBtn} title="Zoom In">＋</button>
-            <button onClick={() => triggerCameraAction('zoomOut')} style={styles.dockBtn} title="Zoom Out">－</button>
             <button onClick={() => triggerCameraAction('reset')} style={styles.dockBtn} title="Reset Viewport">🪐</button>
-            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 18px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px'}}>
-              {isSpinning ? '⚠️ STOP MOTION' : '🔄 COMPONENT SPIN'}
+            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 12px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>
+              {isSpinning ? 'SPINNING' : 'SPIN'}
             </button>
           </div>
         </main>
 
         {/* Right Side Metrics and Applications Custom Console Panel */}
-        <aside style={styles.rightSidebar}>
+        <aside style={{...styles.rightSidebar, width: isMobile ? '100%' : '340px', boxSizing: 'border-box', borderLeft: isMobile ? 'none' : '1px solid #1f242c', borderTop: isMobile ? '1px solid #1f242c' : 'none'}}>
           <div style={styles.propertyWidget}>
             <div style={styles.sidebarLabel}>Spatial Metrics Layer</div>
             <div style={styles.metricResultContainer}>
@@ -637,59 +645,59 @@ const App = () => {
 
 // Layout Stylesheet Configuration
 const styles = {
-  appContainer: { display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#07090e', color: '#c9d1d9', fontFamily: '"Segoe UI", Roboto, Helvetica, sans-serif', overflow: 'hidden' },
-  topHeader: { height: '70px', background: 'linear-gradient(to right, #0d1117, #0b0e14)', borderBottom: '1px solid #1f242c', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 28px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' },
-  brandGroup: { display: 'flex', alignItems: 'center', gap: '16px' },
-  logoBadge: { fontSize: '22px', background: 'linear-gradient(135deg, #1f2937, #111827)', padding: '8px', borderRadius: '10px', border: '1px solid #2d3748', boxShadow: '0 0 15px rgba(0,255,245,0.1)' },
-  appTitle: { margin: 0, fontSize: '15px', fontWeight: '700', color: '#f0f6fc', letterSpacing: '0.8px', textTransform: 'uppercase' },
-  appSubtitle: { margin: 0, fontSize: '10px', color: '#6e7681', marginTop: '3px', letterSpacing: '0.3px' },
-  statusPill: { background: 'rgba(0, 255, 150, 0.06)', border: '1px solid rgba(0,255,150,0.2)', padding: '6px 14px', borderRadius: '6px', fontSize: '10px', color: '#00ff96', fontWeight: 'bold', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' },
-  pulseDot: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#00ff96', boxShadow: '0 0 8px #00ff96' },
-  workspace: { flex: 1, display: 'flex', overflow: 'hidden' },
-  leftSidebar: { width: '310px', background: '#0b0e14', borderRight: '1px solid #1f242c', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '20px' },
-  sidebarLabel: { fontSize: '10px', fontWeight: '800', color: '#00fff5', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '4px', textShadow: '0 0 10px rgba(0,255,245,0.15)' },
+  appContainer: { display: 'flex', flexDirection: 'column', backgroundColor: '#07090e', color: '#c9d1d9', fontFamily: '"Segoe UI", Roboto, Helvetica, sans-serif' },
+  topHeader: { minHeight: '70px', background: 'linear-gradient(to right, #0d1117, #0b0e14)', borderBottom: '1px solid #1f242c', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' },
+  brandGroup: { display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', padding: '8px 0' },
+  logoBadge: { fontSize: '20px', background: 'linear-gradient(135deg, #1f2937, #111827)', padding: '6px 8px', borderRadius: '10px', border: '1px solid #2d3748' },
+  appTitle: { margin: 0, fontSize: '14px', fontWeight: '700', color: '#f0f6fc', letterSpacing: '0.8px', textTransform: 'uppercase' },
+  appSubtitle: { margin: 0, fontSize: '10px', color: '#6e7681', marginTop: '3px' },
+  statusPill: { background: 'rgba(0, 255, 150, 0.06)', border: '1px solid rgba(0,255,150,0.2)', padding: '6px 14px', borderRadius: '6px', fontSize: '10px', color: '#00ff96', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' },
+  pulseDot: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#00ff96' },
+  workspace: { flex: 1, display: 'flex' },
+  leftSidebar: { background: '#0b0e14', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' },
+  sidebarLabel: { fontSize: '10px', fontWeight: '800', color: '#00fff5', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '4px' },
   searchBar: { width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #21262d', background: '#07090e', fontSize: '13px', color: '#f0f6fc', boxSizing: 'border-box', outline: 'none' },
   tabGroup: { display: 'flex', background: '#07090e', padding: '3px', borderRadius: '8px', gap: '2px', border: '1px solid #1f242c', overflowX: 'auto' },
-  activeTab: { flex: 1, border: 'none', background: '#161b22', padding: '8px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', color: '#00fff5', cursor: 'pointer', whiteSpace: 'nowrap', borderBottom: '2px solid #00fff5' },
+  activeTab: { flex: 1, border: 'none', background: '#161b22', padding: '8px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', color: '#00fff5', cursor: 'pointer', whiteSpace: 'nowrap' },
   inactiveTab: { flex: 1, border: 'none', background: 'transparent', padding: '8px 10px', fontSize: '10px', color: '#8b949e', cursor: 'pointer', whiteSpace: 'nowrap' },
   itemScrollList: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' },
-  inactiveCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.01)', border: '1px solid transparent' },
-  activeCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', background: 'linear-gradient(135deg, #161b22, #0d1117)', border: '1px solid #00fff5', boxShadow: '0 0 15px rgba(0,255,245,0.1)' },
+  inactiveCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.01)' },
+  activeCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', background: 'linear-gradient(135deg, #161b22, #0d1117)', border: '1px solid #00fff5' },
   cardIcon: { fontSize: '12px', background: '#07090e', padding: '6px 8px', borderRadius: '6px', border: '1px solid #21262d', color: '#00fff5' },
   cardTitle: { fontSize: '13px', fontWeight: '600', color: '#f0f6fc' },
   cardSubtitle: { fontSize: '11px', color: '#6e7681', marginTop: '3px' },
-  viewportWrapper: { flex: 1, position: 'relative', background: 'radial-gradient(circle at center, #101520 0%, #07090e 100%)' },
-  canvasMetaBlock: { position: 'absolute', top: '28px', left: '28px', zIndex: 10, pointerEvents: 'none' },
-  categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '3px 8px', borderRadius: '4px', letterSpacing: '1px' },
-  mainCanvasTitle: { margin: '8px 0 0 0', fontSize: '32px', fontWeight: '900', color: '#f0f6fc', letterSpacing: '-0.5px', textShadow: '0 4px 12px rgba(0,0,0,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '550px' },
-  mainCanvasSubtitle: { margin: '4px 0 0 0', fontSize: '13px', color: '#8b949e', fontWeight: '500' },
-  floatingHelpBadge: { position: 'absolute', top: '28px', right: '28px', zIndex: 10, background: 'rgba(13, 17, 23, 0.8)', border: '1px solid #21262d', backdropFilter: 'blur(10px)', padding: '12px 18px', borderRadius: '12px', fontSize: '11px', color: '#c9d1d9', maxWidth: '360px', lineHeight: '1.5', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' },
-  hoverTooltip: { position: 'absolute', bottom: '105px', left: '28px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', boxShadow: '0 0 20px rgba(0,255,245,0.25)', padding: '12px 16px', borderRadius: '10px', fontSize: '11px', pointerEvents: 'none', backdropFilter: 'blur(8px)' },
-  coordinatesRow: { fontSize: '11px', fontFamily: 'monospace', color: '#00ff96', marginTop: '6px', background: 'rgba(0,255,150,0.05)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(0,255,150,0.1)' },
+  viewportWrapper: { flex: 1, position: 'relative', background: 'radial-gradient(circle at center, #101520 0%, #07090e 100%)', minWidth: 0 },
+  canvasMetaBlock: { position: 'absolute', top: '20px', left: '20px', zIndex: 10, pointerEvents: 'none' },
+  categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '2px 6px', borderRadius: '4px' },
+  mainCanvasTitle: { margin: '6px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#f0f6fc', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' },
+  mainCanvasSubtitle: { margin: '2px 0 0 0', fontSize: '12px', color: '#8b949e' },
+  floatingHelpBadge: { position: 'absolute', top: '20px', right: '20px', zIndex: 10, background: 'rgba(13, 17, 23, 0.8)', border: '1px solid #21262d', padding: '10px 14px', borderRadius: '12px', fontSize: '11px', maxWidth: '300px', lineHeight: '1.4' },
+  hoverTooltip: { position: 'absolute', bottom: '85px', left: '20px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', padding: '10px 14px', borderRadius: '10px', fontSize: '11px' },
+  coordinatesRow: { fontSize: '10px', fontFamily: 'monospace', color: '#00ff96', marginTop: '4px' },
   canvasTarget: { width: '100%', height: '100%' },
-  loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', background: 'rgba(7, 9, 14, 0.95)', padding: '30px', borderRadius: '16px', border: '1px solid #00fff5', boxShadow: '0 0 30px rgba(0,255,245,0.2)' },
-  spinner: { width: '36px', height: '36px', border: '3px solid rgba(0,255,245,0.1)', borderTop: '3px solid #00fff5', borderRadius: '50%' },
-  floatingControlsDock: { position: 'absolute', bottom: '36px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', gap: '10px', background: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(16px)', padding: '10px 18px', borderRadius: '16px', border: '1px solid #21262d', boxShadow: '0 10px 40px rgba(0,0,0,0.6)' },
-  renderToggleGroup: { display: 'flex', background: '#07090e', padding: '3px', borderRadius: '10px', border: '1px solid #21262d', gap: '2px' },
-  activeToggleBtn: { border: 'none', background: '#1f242c', color: '#00fff5', fontSize: '10px', fontWeight: 'bold', padding: '0 12px', borderRadius: '8px', cursor: 'pointer', height: '32px' },
-  inactiveToggleBtn: { border: 'none', background: 'transparent', color: '#8b949e', fontSize: '10px', padding: '0 12px', borderRadius: '8px', cursor: 'pointer', height: '32px', transition: 'color 0.2s' },
-  dockBtn: { width: '38px', height: '38px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', color: '#c9d1d9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' },
-  rightSidebar: { width: '340px', background: '#0b0e14', borderLeft: '1px solid #1f242c', padding: '24px', display: 'flex', flexDirection: 'column', gap: '22px', overflowY: 'auto' },
+  loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'rgba(7, 9, 14, 0.95)', padding: '20px', borderRadius: '12px', border: '1px solid #00fff5' },
+  spinner: { width: '28px', height: '28px', border: '3px solid rgba(0,255,245,0.1)', borderTop: '3px solid #00fff5', borderRadius: '50%' },
+  floatingControlsDock: { position: 'absolute', zIndex: 10, display: 'flex', gap: '6px', background: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(10px)', padding: '8px 12px', borderRadius: '14px', border: '1px solid #21262d' },
+  renderToggleGroup: { display: 'flex', background: '#07090e', padding: '2px', borderRadius: '8px', border: '1px solid #21262d' },
+  activeToggleBtn: { border: 'none', background: '#1f242c', color: '#00fff5', fontSize: '10px', fontWeight: 'bold', padding: '0 10px', borderRadius: '6px', height: '28px' },
+  inactiveToggleBtn: { border: 'none', background: 'transparent', color: '#8b949e', fontSize: '10px', padding: '0 10px', borderRadius: '6px', height: '28px' },
+  dockBtn: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', color: '#c9d1d9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' },
+  rightSidebar: { background: '#0b0e14', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
   propertyWidget: { display: 'flex', flexDirection: 'column' },
-  metricResultContainer: { border: '1px dashed #2d3748', borderRadius: '10px', padding: '18px', marginTop: '10px', textAlign: 'center', background: '#07090e', boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.5)' },
-  metricValue: { fontSize: '32px', fontWeight: '800', color: '#00ff96', letterSpacing: '0.5px', textShadow: '0 0 15px rgba(0,255,150,0.2)' },
-  metricDetails: { fontSize: '11px', color: '#8b949e', marginTop: '8px', letterSpacing: '0.3px' },
-  interpretationCard: { marginTop: '14px', padding: '12px', backgroundColor: '#131722', borderRadius: '8px', borderLeft: '3px solid #00ff96', textAlign: 'left', borderTop: '1px solid #1f242c', borderRight: '1px solid #1f242c', borderBottom: '1px solid #1f242c' },
-  placeholderText: { fontSize: '11px', color: '#556275', fontStyle: 'italic', padding: '8px 0' },
-  clearBtn: { marginTop: '14px', width: '100%', padding: '9px', background: 'rgba(255,0,85,0.06)', border: '1px solid #ff0055', color: '#ff0055', borderRadius: '6px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', letterSpacing: '1px' },
-  useCaseContainer: { display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' },
-  useCaseCard: { background: '#12161f', borderLeft: '3px solid #00fff5', borderRadius: '0 6px 6px 0', padding: '10px 14px', boxShadow: '0 4px 10px rgba(0,0,0,0.15)' },
-  useCaseLabel: { fontSize: '10px', fontWeight: 'bold', color: '#58a6ff', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  useCaseBody: { fontSize: '11px', color: '#c9d1d9', lineHeight: '1.5', marginTop: '4px' },
-  detailsTable: { width: '100%', borderCollapse: 'collapse', marginTop: '10px' },
-  tdLabel: { padding: '9px 0', fontSize: '12px', color: '#8b949e', borderBottom: '1px solid #1f242c' },
-  tdValue: { padding: '9px 0', fontSize: '12px', color: '#f0f6fc', fontWeight: '600', textAlign: 'right', borderBottom: '1px solid #1f242c' },
-  descriptionParagraph: { fontSize: '12px', color: '#8b949e', lineHeight: '1.6', marginTop: '10px' }
+  metricResultContainer: { border: '1px dashed #2d3748', borderRadius: '10px', padding: '16px', marginTop: '8px', textAlign: 'center', background: '#07090e' },
+  metricValue: { fontSize: '28px', fontWeight: '800', color: '#00ff96' },
+  metricDetails: { fontSize: '11px', color: '#8b949e', marginTop: '6px' },
+  interpretationCard: { marginTop: '12px', padding: '10px', backgroundColor: '#131722', borderRadius: '8px', borderLeft: '3px solid #00ff96', textAlign: 'left' },
+  placeholderText: { fontSize: '11px', color: '#556275', fontStyle: 'italic' },
+  clearBtn: { marginTop: '12px', width: '100%', padding: '8px', background: 'rgba(255,0,85,0.06)', border: '1px solid #ff0055', color: '#ff0055', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' },
+  useCaseContainer: { display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' },
+  useCaseCard: { background: '#12161f', borderLeft: '3px solid #00fff5', borderRadius: '0 6px 6px 0', padding: '10px 12px' },
+  useCaseLabel: { fontSize: '10px', fontWeight: 'bold', color: '#58a6ff', textTransform: 'uppercase' },
+  useCaseBody: { fontSize: '11px', color: '#c9d1d9', lineHeight: '1.4', marginTop: '2px' },
+  detailsTable: { width: '100%', borderCollapse: 'collapse', marginTop: '8px' },
+  tdLabel: { padding: '8px 0', fontSize: '12px', color: '#8b949e', borderBottom: '1px solid #1f242c' },
+  tdValue: { padding: '8px 0', fontSize: '12px', color: '#f0f6fc', fontWeight: '600', textAlign: 'right', borderBottom: '1px solid #1f242c' },
+  descriptionParagraph: { fontSize: '12px', color: '#8b949e', lineHeight: '1.5', marginTop: '8px' }
 };
 
 export default App;
