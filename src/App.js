@@ -1,55 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as NGL from 'ngl';
 
-// Premium Visual Molecular & Protein Target Complex Database
+// Premium Visual Molecular Database (Proteins Removed)
 const MOLECULE_DATABASE = {
-  // --- ADVANCED TARGET COMPLEXES (RCSB PDB DATA PIPELINES) ---
-  "HIV-1 Protease Complex": {
-    category: 'Target Complex',
-    sub: 'Retroviral Enzyme with Indinavir Inhibitor',
-    formula: 'Protease Homodimer + C36H47N5O4',
-    weight: '22.6 kDa (Complex)',
-    type: 'Macromolecular Aspartyl Protease',
-    source: 'RCSB PDB ID: 1HSG',
-    rcsbId: '1hsg',
-    description: 'A classic structural biology benchmark complex. It features the dimeric HIV-1 protease enzyme bound tightly to the transition-state mimetic inhibitor Indinavir, blocking viral maturation loops.',
-    useCases: [
-      { area: 'Virology Therapeutics', detail: 'Primary structural reference model for rational design of antiretroviral drug cocktails (HAART).' },
-      { area: 'Competitive Inhibition', detail: 'Demonstrates perfect structural fit where the drug mimics a natural peptide substrate to jam active catalytic sites.' },
-      { area: 'Resistance Profiling', detail: 'Used to map how point mutations in the pocket cause spatial shifts that lead to drug-resistant viral strains.' }
-    ]
-  },
-  "COVID-19 Main Protease": {
-    category: 'Target Complex',
-    sub: 'SARS-CoV-2 Mpro with Nirmatrelvir',
-    formula: 'Cysteinyl Protease + C23H32F3N5O4',
-    weight: '34.2 kDa (Mpro Unit)',
-    type: 'Viral Replication Target Complex',
-    source: 'RCSB PDB ID: 7RFS',
-    rcsbId: '7rfs',
-    description: 'The structural crystallographic layout of the SARS-CoV-2 main protease (Mpro) inactivated by covalent binding with Nirmatrelvir (the active antiviral drug component of Paxlovid).',
-    useCases: [
-      { area: 'Pandemic Response', detail: 'The absolute structural blueprint utilized to deploy rapid frontline oral therapies during the global viral outbreaks.' },
-      { area: 'Covalent Mechanism', detail: 'Illustrates how a highly reactive nitrile warhead on the drug locks onto a critical catalytic Cysteine-145 residue.' },
-      { area: 'Broad Antivirals', detail: 'Evaluated against multi-lineage coronaviruses due to the highly conserved nature of the protease sequence.' }
-    ]
-  },
-  "Influenza Neuraminidase": {
-    category: 'Target Complex',
-    sub: 'Surface Glycoprotein with Oseltamivir',
-    formula: 'Tetrameric Anchor + C16H28N2O4',
-    weight: '≈240 kDa (Full Assembly)',
-    type: 'Sialic Acid Cleavage Glycoprotein',
-    source: 'RCSB PDB ID: 2HTY',
-    rcsbId: '2hty',
-    description: 'An influenza virus surface enzyme complexed with the blocking agent Oseltamivir (Tamiflu). This interaction stops the newly replicated viral particles from cutting loose to infect nearby lung tissues.',
-    useCases: [
-      { area: 'Prophylaxis Architecture', detail: 'Serves as the structural framework used to track and formulate preventative seasonal flu treatments.' },
-      { area: 'Transition-State Mimicry', detail: 'Demonstrates spatial competition against native sialic acid targets on host respiratory epithelial linings.' },
-      { area: 'Efficacy Assessment', detail: 'Essential for testing binding pocket stability when structural changes appear in circulating avian/swine variants.' }
-    ]
-  },
-  // --- STANDALONE BIO-AGENTS & NEUROCHEMISTRY (PUBCHEM API PIPELINES) ---
   Caffeine: { 
     category: 'Neurochemistry', 
     sub: 'Central Nervous System Stimulant', 
@@ -174,7 +127,7 @@ const MOLECULE_DATABASE = {
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('All');
-  const [selectedMol, setSelectedMol] = useState('HIV-1 Protease Complex');
+  const [selectedMol, setSelectedMol] = useState('Glucose');
   const [searchQuery, setSearchQuery] = useState('');
   const [dynamicDetails, setDynamicDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -222,40 +175,18 @@ const App = () => {
     ]
   };
 
-  const isTargetComplex = currentDetails.category === 'Target Complex';
-
-  // 1. Core Molecular Component Geometry Rendering Helper
+  // Core Molecular Component Geometry Rendering Helper
   const renderComponent = useCallback((component) => {
     componentRef.current = component;
     const isMobileDevice = window.innerWidth < 768;
 
-    if (isTargetComplex) {
-      // ADVANCED WORKBENCH ENGINE RENDER: 
-      // Render the massive structural background protein as smooth schematic ribbon loops
-      component.addRepresentation("cartoon", { 
-        colorScheme: "chainname",
-        opacity: 0.7,
-        quality: isMobileDevice ? "low" : "high"
-      });
-      
-      // Isolate and pop just the tiny drug ligand compound embedded in the active site pocket
-      component.addRepresentation("ball+stick", { 
-        sele: "ligand",
-        radiusScale: 1.4,
-        aspectRatio: 1.5,
-        colorScheme: "element",
-        quality: isMobileDevice ? "low" : "high"
-      });
-    } else {
-      // STANDALONE COMPOUND REGULAR RENDER STYLE:
-      component.addRepresentation(renderStyle, { 
-        radiusScale: renderStyle === 'spacefill' ? 0.8 : 1.3, 
-        aspectRatio: 1.5,
-        multipleBond: "symmetric",
-        colorScheme: "element", 
-        quality: isMobileDevice ? "low" : "high"
-      });
-    }
+    component.addRepresentation(renderStyle, { 
+      radiusScale: renderStyle === 'spacefill' ? 0.8 : (isMobileDevice ? 1.7 : 1.3), 
+      aspectRatio: 1.5,
+      multipleBond: "symmetric",
+      colorScheme: "element", 
+      quality: isMobileDevice ? "low" : "high"
+    });
     
     stageRef.current.handleResize();
     stageRef.current.autoView();
@@ -265,15 +196,15 @@ const App = () => {
         stageRef.current.handleResize();
         stageRef.current.autoView();
       }
-    }, 60);
+    }, 100);
 
     setIsLoading(false);
     if (isSpinningRef.current) {
       stageRef.current.setSpin([0, 1, 0], 0.005);
     }
-  }, [renderStyle, isTargetComplex]);
+  }, [renderStyle]);
 
-  // 2. Extracted Core Structural Engine Runner wrapped with useCallback
+  // Extracted Core Structural Engine Runner
   const loadStructure = useCallback(async () => {
     if (!stageRef.current) return;
     setIsLoading(true);
@@ -286,16 +217,6 @@ const App = () => {
       componentRef.current = null;
       
       const targetMeta = MOLECULE_DATABASE[selectedMol];
-
-      // Step A: Check if it is a specialized macro-biological structural complex from RCSB PDB
-      if (targetMeta?.rcsbId) {
-        stageRef.current.loadFile(`rcsb://${targetMeta.rcsbId}`)
-          .then((component) => renderComponent(component))
-          .catch(() => setIsLoading(false));
-        return;
-      }
-
-      // Step B: Otherwise execute traditional small molecule pipeline via PubChem
       let targetCid = targetMeta?.cid;
       
       if (!targetCid) {
@@ -341,7 +262,7 @@ const App = () => {
       
       stageRef.current = new NGL.Stage(element, { 
         backgroundColor: '#0a0d12', 
-        sampleLevel: isMobileDevice ? 0 : 3, 
+        sampleLevel: isMobileDevice ? 0 : 2, 
         impostor: !isMobileDevice 
       });
       
@@ -354,10 +275,8 @@ const App = () => {
         clipFar: 100
       });
 
-      stageRef.current.handleResize();
-
-      // Click Signal Engine
-      stageRef.current.signals.clicked.add((pickingProxy) => {
+      // MOBILE FIX: Intercept both mouse clicks and touch pointers inside NGL's core picking engine
+      const atomPickHandler = (pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
           const atom = pickingProxy.atom;
           setSelectedAtoms((prev) => {
@@ -366,13 +285,20 @@ const App = () => {
             return updated;
           });
         }
-      });
+      };
+
+      stageRef.current.signals.clicked.add(atomPickHandler);
+      
+      element.addEventListener('touchend', (e) => {
+        if (stageRef.current && stageRef.current.mouseControls) {
+          stageRef.current.handleResize(); 
+        }
+      }, { passive: true });
 
       // Interactive HUD Hover Signal Engine
       stageRef.current.signals.hovered.add((pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
           const atom = pickingProxy.atom;
-          // Build string to denote structural segment origins
           let locationContext = `Atom Index Reference: #${atom.index}`;
           if (atom.resname) {
             locationContext = `Residue Pocket: [${atom.resname}]${atom.resno} | Chain: ${atom.chainname}`;
@@ -396,7 +322,7 @@ const App = () => {
     }
   };
 
-  // 3. Clear & Redraw Metric Measurement Layers
+  // Clear & Redraw Metric Measurement Layers
   useEffect(() => {
     if (distanceRepRef.current && componentRef.current) {
       try {
@@ -421,28 +347,14 @@ const App = () => {
       const numDist = parseFloat(dist);
       let interpretation = "";
 
-      if (isTargetComplex) {
-        // CONTEXT-AWARE METRICS TYPE 1: Protein-Ligand Interface
-        if (numDist >= 1.0 && numDist <= 2.2) {
-          interpretation = "⚠️ Extreme Steric Clash / Overlap: Proximity index is too tight. Represents structural spatial geometry collisions or rigid unnatural overlaps inside the receptor pocket.";
-        } else if (numDist > 2.2 && numDist <= 3.4) {
-          interpretation = "⚡ Hydrogen Bond Binding Lock: Perfect interaction range! This is exactly WHERE and HOW the drug compound physically anchors to the receptor walls to shut down active disease mechanics.";
-        } else if (numDist > 3.4 && numDist <= 4.5) {
-          interpretation = "🧬 Hydrophobic Interaction / Van der Waals Bounds: Shows lipophilic surface contact. Essential for computing binding stability metrics inside the grease pockets of enzyme pathways.";
-        } else {
-          interpretation = "🌐 Distant Non-Interacting Nodes: The distance is outside localized affinity boundaries. Shows no active structural binding contribution at this specific geometric node pair.";
-        }
+      if (numDist >= 1.0 && numDist <= 1.6) {
+        interpretation = "👉 Intramolecular Covalent Link: Measures stable backbone links. Defines the rigid skeletal shape of this single compound asset.";
+      } else if (numDist > 1.6 && numDist <= 2.5) {
+        interpretation = "👉 Intramolecular Steric Strain Layer: Crowded sub-atomic zone forcing the standalone molecule to conform into specific shapes.";
+      } else if (numDist > 2.5 && numDist <= 3.5) {
+        interpretation = "👉 Internal Hydrogen Bond Potential: Identifies polar atom gaps controlling fluid solubility layers.";
       } else {
-        // CONTEXT-AWARE METRICS TYPE 2: Standalone Compound Framework
-        if (numDist >= 1.0 && numDist <= 1.6) {
-          interpretation = "👉 Intramolecular Covalent Link: Measures stable backbone links. Defines the rigid skeletal shape of this single, standalone compound asset.";
-        } else if (numDist > 1.6 && numDist <= 2.5) {
-          interpretation = "👉 Intramolecular Steric Strain Layer: Crowded sub-atomic zone. High internal pressure here forces the standalone molecule to bend or twist into specific shapes.";
-        } else if (numDist > 2.5 && numDist <= 3.5) {
-          interpretation = "👉 Internal Hydrogen Bond Potential: Identifies polar atom gaps. This spacing controls how cleanly this molecule will mix with water solvents later.";
-        } else {
-          interpretation = "👉 Molecular Conformation Span: Tracks total spatial envelope length. Essential for calculating if the overall size profile crosses the threshold to fit into target enzyme pockets.";
-        }
+        interpretation = "👉 Molecular Conformation Span: Tracks total spatial envelope length of this standalone molecule layout.";
       }
       
       setDistanceInterpretation(interpretation);
@@ -452,12 +364,12 @@ const App = () => {
 
         const newRep = componentRef.current.addRepresentation("distance", {
           atomPair: targetPair,
-          labelColor: "#00ffcc",   
-          labelSize: 2.5,
+          labelColor: "#00fff5",   
+          labelSize: window.innerWidth < 768 ? 4.0 : 2.5, 
           labelFont: "sans-serif",
           labelVisible: true,
-          lineColor: "#ff2a6d",    
-          lineWidth: 4.0,
+          lineColor: "#ff0055",    
+          lineWidth: window.innerWidth < 768 ? 6.0 : 4.0, 
           name: "distance-layer"   
         });
         
@@ -467,14 +379,13 @@ const App = () => {
       setCalculatedDistance(null);
       setDistanceInterpretation('');
     }
-  }, [selectedAtoms, isTargetComplex]);
+  }, [selectedAtoms]);
 
-  // Trigger whenever structural choice dependencies update
   useEffect(() => {
     loadStructure();
   }, [loadStructure]);
 
-  // 4. Global Animation Toggle Controller Loop
+  // Global Animation Toggle Controller Loop
   useEffect(() => {
     if (!stageRef.current) return;
     if (isSpinning) {
@@ -543,7 +454,7 @@ const App = () => {
           <div style={styles.logoBadge}>⚛️</div>
           <div>
             <h1 style={styles.appTitle}>Chemistry Architecture Studio</h1>
-            <p style={styles.appSubtitle}>High-Fidelity Bio-Spatial Analytics & Target Binding Workbench</p>
+            <p style={styles.appSubtitle}>High-Fidelity Bio-Spatial Analytics & Lattice Mapping</p>
           </div>
         </div>
         {!isMobile && (
@@ -567,7 +478,7 @@ const App = () => {
           />
           
           <div style={styles.tabGroup}>
-            {['All', 'Target Complex', 'Neurochemistry', 'Complex Bio-agents', 'Chemical Solvents', 'Nanotech'].map(tab => (
+            {['All', 'Neurochemistry', 'Complex Bio-agents', 'Chemical Solvents', 'Nanotech'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={activeTab === tab ? styles.activeTab : styles.inactiveTab}>
                 {tab}
               </button>
@@ -575,10 +486,10 @@ const App = () => {
           </div>
 
           <div style={styles.sidebarLabel}>Lattice Asset Registry ({filteredMolecules.length})</div>
-          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '220px' : 'none'}}>
+          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '180px' : 'none'}}>
             {filteredMolecules.map(name => (
               <div key={name} onClick={() => { setDynamicDetails(null); setSelectedMol(name); }} style={selectedMol === name && !dynamicDetails ? styles.activeCard : styles.inactiveCard}>
-                <div style={styles.cardIcon}>{MOLECULE_DATABASE[name].category === 'Target Complex' ? '🧬' : '⚡'}</div>
+                <div style={styles.cardIcon}>⚡</div>
                 <div>
                   <div style={styles.cardTitle}>{name}</div>
                   <div style={styles.cardSubtitle}>{MOLECULE_DATABASE[name].sub}</div>
@@ -589,14 +500,21 @@ const App = () => {
         </aside>
 
         {/* Center Main WebGL Viewport Wrapper */}
-        <main style={{...styles.viewportWrapper, height: isMobile ? '400px' : 'auto', minHeight: isMobile ? '400px' : 'none'}}>
+        <main style={{...styles.viewportWrapper, height: isMobile ? '480px' : 'auto', minHeight: isMobile ? '480px' : 'none'}}>
           <div style={styles.canvasMetaBlock}>
-            <span style={{...styles.categoryTag, color: isTargetComplex ? '#ff0055' : '#00fff5', borderColor: isTargetComplex ? 'rgba(255,0,85,0.3)' : 'rgba(0,255,245,0.2)'}}>
+            <span style={{...styles.categoryTag, color: '#00fff5', borderColor: 'rgba(0,255,245,0.2)'}}>
               {currentDetails.category.toUpperCase()}
             </span>
             <h2 style={styles.mainCanvasTitle}>{selectedMol.toUpperCase()}</h2>
             <p style={styles.mainCanvasSubtitle}>{currentDetails.sub}</p>
           </div>
+
+          {/* MOBILE HELPER HUD */}
+          {selectedAtoms.length > 0 && selectedAtoms.length < 2 && (
+            <div style={styles.mobileSelectionIndicator}>
+              📍 Node 1 Selected ({selectedAtoms[0].element}). Tap 2nd atom to run distance...
+            </div>
+          )}
 
           {/* Real-Time Element Node Hover Tooltip HUD */}
           {hoveredAtom && (
@@ -619,21 +537,15 @@ const App = () => {
           {/* Core Target Element Attached to Callback Ref Hooks */}
           <div ref={initCanvasRef} style={styles.canvasTarget}></div>
 
-          {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
-          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
-            {!isTargetComplex ? (
-              <div style={styles.renderToggleGroup}>
-                <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
-                <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
-              </div>
-            ) : (
-              <div style={{fontSize: '10px', fontWeight: 'bold', color: '#ff0055', background: 'rgba(255,0,85,0.06)', padding: '0 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', border: '1px solid rgba(255,0,85,0.2)', height: '28px'}}>
-                AUTO RENDERING: CARTOON RECEPTOR + LIGAND POCKET
-              </div>
-            )}
+          {/* Action Controls Overlays */}
+          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px', left: isMobile ? '4%' : '20px'}}>
+            <div style={styles.renderToggleGroup}>
+              <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
+              <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
+            </div>
             <div style={{width: '1px', background: '#21262d', margin: '0 4px'}} />
             <button onClick={() => triggerCameraAction('reset')} style={styles.dockBtn} title="Reset Viewport">🪐</button>
-            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 14px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>
+            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 12px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>
               {isSpinning ? 'SPINNING' : 'SPIN'}
             </button>
           </div>
@@ -651,9 +563,9 @@ const App = () => {
                     Vector Node 1: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[0]?.element || '?'}]</span> | Vector Node 2: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[1]?.element || '?'}]</span>
                   </div>
 
-                  <div style={{...styles.interpretationCard, borderLeftColor: isTargetComplex ? '#ff0055' : '#00ff96'}}>
-                    <span style={{ color: isTargetComplex ? '#ff0055' : '#00ff96', fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.5px' }}>
-                      {isTargetComplex ? "INTERMOLECULAR BINDING METRICS:" : "INTRAMOLECULAR CONFORMATION ANALYSIS:"}
+                  <div style={{...styles.interpretationCard, borderLeftColor: '#00ff96'}}>
+                    <span style={{ color: '#00ff96', fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.5px' }}>
+                      INTRAMOLECULAR CONFORMATION ANALYSIS:
                     </span>
                     <p style={{ margin: '6px 0 0 0', color: '#acbac7', fontSize: '11px', lineHeight: '1.45' }}>{distanceInterpretation}</p>
                   </div>
@@ -662,9 +574,7 @@ const App = () => {
                 </div>
               ) : (
                 <div style={styles.placeholderText}>
-                  {isTargetComplex 
-                    ? "Click an atom on the drug ligand and one on the ribbon loop target to evaluate binding affinity limits..." 
-                    : "Awaiting viewport coordinate node collection..."}
+                  Awaiting viewport touch-coordinate node collection. Tap any two atoms to instantly compute spatial distance rules.
                 </div>
               )}
             </div>
@@ -675,7 +585,7 @@ const App = () => {
             <div style={styles.useCaseContainer}>
               {currentDetails.useCases ? (
                 currentDetails.useCases.map((uc, idx) => (
-                  <div key={idx} style={{...styles.useCaseCard, borderLeftColor: isTargetComplex ? '#ff0055' : '#00fff5'}}>
+                  <div key={idx} style={{...styles.useCaseCard, borderLeftColor: '#00fff5'}}>
                     <div style={styles.useCaseLabel}>{uc.area}</div>
                     <div style={styles.useCaseBody}>{uc.detail}</div>
                   </div>
@@ -737,6 +647,7 @@ const styles = {
   mainCanvasTitle: { margin: '6px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#f0f6fc', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' },
   mainCanvasSubtitle: { margin: '2px 0 0 0', fontSize: '12px', color: '#8b949e' },
   canvasTarget: { width: '100%', height: '100%', minHeight: '400px', backgroundColor: '#0a0d12' },
+  mobileSelectionIndicator: { position: 'absolute', top: '90px', left: '20px', right: '20px', zIndex: 15, background: 'rgba(255,0,85,0.9)', border: '1px solid #ff0055', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
   hoverTooltip: { position: 'absolute', bottom: '85px', left: '20px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', padding: '10px 14px', borderRadius: '10px', fontSize: '11px' },
   coordinatesRow: { fontSize: '10px', fontFamily: 'monospace', color: '#00ff96', marginTop: '4px' },
   loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'rgba(7, 9, 14, 0.95)', padding: '20px', borderRadius: '12px', border: '1px solid #00fff5' },
