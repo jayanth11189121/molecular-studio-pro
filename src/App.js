@@ -1,8 +1,55 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as NGL from 'ngl';
 
-// Premium Visual Molecular Database with dedicated Application/Use-Case datasets
+// Premium Visual Molecular & Protein Target Complex Database
 const MOLECULE_DATABASE = {
+  // --- ADVANCED TARGET COMPLEXES (RCSB PDB DATA PIPELINES) ---
+  "HIV-1 Protease Complex": {
+    category: 'Target Complex',
+    sub: 'Retroviral Enzyme with Indinavir Inhibitor',
+    formula: 'Protease Homodimer + C36H47N5O4',
+    weight: '22.6 kDa (Complex)',
+    type: 'Macromolecular Aspartyl Protease',
+    source: 'RCSB PDB ID: 1HSG',
+    rcsbId: '1hsg',
+    description: 'A classic structural biology benchmark complex. It features the dimeric HIV-1 protease enzyme bound tightly to the transition-state mimetic inhibitor Indinavir, blocking viral maturation loops.',
+    useCases: [
+      { area: 'Virology Therapeutics', detail: 'Primary structural reference model for rational design of antiretroviral drug cocktails (HAART).' },
+      { area: 'Competitive Inhibition', detail: 'Demonstrates perfect structural fit where the drug mimics a natural peptide substrate to jam active catalytic sites.' },
+      { area: 'Resistance Profiling', detail: 'Used to map how point mutations in the pocket cause spatial shifts that lead to drug-resistant viral strains.' }
+    ]
+  },
+  "COVID-19 Main Protease": {
+    category: 'Target Complex',
+    sub: 'SARS-CoV-2 Mpro with Nirmatrelvir',
+    formula: 'Cysteinyl Protease + C23H32F3N5O4',
+    weight: '34.2 kDa (Mpro Unit)',
+    type: 'Viral Replication Target Complex',
+    source: 'RCSB PDB ID: 7RFS',
+    rcsbId: '7rfs',
+    description: 'The structural crystallographic layout of the SARS-CoV-2 main protease (Mpro) inactivated by covalent binding with Nirmatrelvir (the active antiviral drug component of Paxlovid).',
+    useCases: [
+      { area: 'Pandemic Response', detail: 'The absolute structural blueprint utilized to deploy rapid frontline oral therapies during the global viral outbreaks.' },
+      { area: 'Covalent Mechanism', detail: 'Illustrates how a highly reactive nitrile warhead on the drug locks onto a critical catalytic Cysteine-145 residue.' },
+      { area: 'Broad Antivirals', detail: 'Evaluated against multi-lineage coronaviruses due to the highly conserved nature of the protease sequence.' }
+    ]
+  },
+  "Influenza Neuraminidase": {
+    category: 'Target Complex',
+    sub: 'Surface Glycoprotein with Oseltamivir',
+    formula: 'Tetrameric Anchor + C16H28N2O4',
+    weight: '≈240 kDa (Full Assembly)',
+    type: 'Sialic Acid Cleavage Glycoprotein',
+    source: 'RCSB PDB ID: 2HTY',
+    rcsbId: '2hty',
+    description: 'An influenza virus surface enzyme complexed with the blocking agent Oseltamivir (Tamiflu). This interaction stops the newly replicated viral particles from cutting loose to infect nearby lung tissues.',
+    useCases: [
+      { area: 'Prophylaxis Architecture', detail: 'Serves as the structural framework used to track and formulate preventative seasonal flu treatments.' },
+      { area: 'Transition-State Mimicry', detail: 'Demonstrates spatial competition against native sialic acid targets on host respiratory epithelial linings.' },
+      { area: 'Efficacy Assessment', detail: 'Essential for testing binding pocket stability when structural changes appear in circulating avian/swine variants.' }
+    ]
+  },
+  // --- STANDALONE BIO-AGENTS & NEUROCHEMISTRY (PUBCHEM API PIPELINES) ---
   Caffeine: { 
     category: 'Neurochemistry', 
     sub: 'Central Nervous System Stimulant', 
@@ -48,19 +95,19 @@ const MOLECULE_DATABASE = {
       { area: 'Sleep Science', detail: 'Serves as the direct metabolic biochemical precursor required for melatonin biosynthesis.' }
     ]
   },
-  Aspirin: {
-    category: 'Pharmaceuticals',
-    sub: 'Nonsteroidal Anti-inflammatory Drug',
-    formula: 'C9H8O4',
-    weight: '180.16 g/mol',
-    type: 'Salicylate Ester Matrix',
-    source: 'Synthetic Salicylate Modification',
-    cid: '2190',
-    description: 'An foundational analgesic used globally to reduce inflammation, mitigate acute somatic pain, and break systemic fever responses.',
+  Glucose: { 
+    category: 'Complex Bio-agents', 
+    sub: 'Simple Monosaccharide Sugar', 
+    formula: 'C6H12O6', 
+    weight: '180.16 g/mol', 
+    type: 'Hexose Carbohydrate Core', 
+    source: 'Plant Photosynthesis', 
+    cid: '5793', 
+    description: 'The primary sub-atomic energy vehicle utilized by biological life, metabolized downstream during cellular respiration loops.',
     useCases: [
-      { area: 'Cardiology', detail: 'Administered in low daily doses as an antiplatelet agent to prevent secondary myocardial infarctions.' },
-      { area: 'Pain Management', detail: 'Commonly deployed to disrupt COX-1 and COX-2 enzyme pathways, turning off local swelling triggers.' },
-      { area: 'First-Aid Protocols', detail: 'Standard frontline emergency protocol compound chewed during acute coronary event onset.' }
+      { area: 'Clinical Hydration', detail: 'Injected as an intravenous dextrose solution to rapidly restabilize critically hypoglycemic patients.' },
+      { area: 'Food Tech', detail: 'Primary crystallization stabilizer and sweetener agent utilized across modern commercial baking operations.' },
+      { area: 'Industrial Biofuels', detail: 'The foundational carbohydrate substrate fermented to produce scalable bio-ethanol fuel cells.' }
     ]
   },
   Penicillin: { 
@@ -93,21 +140,6 @@ const MOLECULE_DATABASE = {
       { area: 'Pest Management', detail: 'Eco-friendly deterrent additive mixed into agricultural grain reserves to ward off invasive mammals.' }
     ]
   },
-  Glucose: { 
-    category: 'Complex Bio-agents', 
-    sub: 'Simple Monosaccharide Sugar', 
-    formula: 'C6H12O6', 
-    weight: '180.16 g/mol', 
-    type: 'Hexose Carbohydrate Core', 
-    source: 'Plant Photosynthesis', 
-    cid: '5793', 
-    description: 'The primary sub-atomic energy vehicle utilized by biological life, metabolized downstream during cellular respiration loops.',
-    useCases: [
-      { area: 'Clinical Hydration', detail: 'Injected as an intravenous dextrose solution to rapidly restabilize critically hypoglycemic patients.' },
-      { area: 'Food Tech', detail: 'Primary crystallization stabilizer and sweetener agent utilized across modern commercial baking operations.' },
-      { area: 'Industrial Biofuels', detail: 'The foundational carbohydrate substrate fermented to produce scalable bio-ethanol fuel cells.' }
-    ]
-  },
   Ethanol: {
     category: 'Chemical Solvents',
     sub: 'Primary Hydroxyl Alcohol Structure',
@@ -121,21 +153,6 @@ const MOLECULE_DATABASE = {
       { area: 'Sanitization', detail: 'Deployed at 70% concentration as an antiseptic to destroy lipid-bound viral and bacterial outer shells.' },
       { area: 'Automotive Fuel', detail: 'Blended with traditional gasoline feedstock (E10/E85) to increase total octane combustion efficiency.' },
       { area: 'Chemical Synthesis', detail: 'Acts as a critical primary manufacturing intermediate block for building esters, halides, and plastics.' }
-    ]
-  },
-  Acetone: {
-    category: 'Chemical Solvents',
-    sub: 'Simplest Aliphatic Ketone Matrix',
-    formula: 'C3H6O',
-    weight: '58.08 g/mol',
-    type: 'Dimethyl Ketone Framework',
-    source: 'Cumene Process Oxidation',
-    cid: '180',
-    description: 'A volatile, flammable organic solvent capable of rapidly dissolving synthetic polymers, resins, and heavy industrial adhesives.',
-    useCases: [
-      { area: 'Lab Protocols', detail: 'Standard glassware rinse agent chosen for its supreme miscibility with water and rapid evaporation rate.' },
-      { area: 'Cosmetic Labs', detail: 'The active primary base solvent formula needed for dissolving cosmetic acrylics and nail lacquers.' },
-      { area: 'Textile Manufacturing', detail: 'Employed to spin synthetic acetate fibers and thin down raw industrial nitrocellulose mixtures.' }
     ]
   },
   Nanotube: { 
@@ -152,27 +169,12 @@ const MOLECULE_DATABASE = {
       { area: 'Energy Storage', detail: 'Integrated into lithium-ion battery anode meshes to significantly raise current capacity cycles.' },
       { area: 'Micro-electronics', detail: 'Developed as alternative field-effect transistors to bypass quantum scale thresholds in silicon.' }
     ]
-  },
-  Buckminsterfullerene: { 
-    category: 'Nanotech', 
-    sub: 'Truncated Icosahedron Cage (Buckyball)', 
-    formula: 'C60', 
-    weight: '720.64 g/mol', 
-    type: 'Closed Cage Pure Carbon', 
-    source: 'Laser Ablation of Graphite', 
-    cid: '123591', 
-    description: 'A pure carbon spherical configuration shaped like a soccer ball composed of 20 hexagons and 12 pentagons, displaying supreme structural structural symmetries.',
-    useCases: [
-      { area: 'Drug Delivery', detail: 'Engineered as a molecular structural hollow cage to safely guide therapeutic chemicals past cell boundaries.' },
-      { area: 'Optics Technology', detail: 'Utilized in high-powered defensive laser protective optics due to non-linear light absorption indexes.' },
-      { area: 'Superconductors', detail: 'Doped with alkali earth metals to generate structural lattices exhibiting zero electrical resistance states.' }
-    ]
   }
 };
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('All');
-  const [selectedMol, setSelectedMol] = useState('Glucose');
+  const [selectedMol, setSelectedMol] = useState('HIV-1 Protease Complex');
   const [searchQuery, setSearchQuery] = useState('');
   const [dynamicDetails, setDynamicDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -220,16 +222,40 @@ const App = () => {
     ]
   };
 
+  const isTargetComplex = currentDetails.category === 'Target Complex';
+
   // 1. Core Molecular Component Geometry Rendering Helper
   const renderComponent = useCallback((component) => {
     componentRef.current = component;
-    component.addRepresentation(renderStyle, { 
-      radiusScale: renderStyle === 'spacefill' ? 0.8 : 1.3, 
-      aspectRatio: 1.5,
-      multipleBond: "symmetric",
-      colorScheme: "element", 
-      quality: window.innerWidth < 768 ? "low" : "high"
-    });
+    const isMobileDevice = window.innerWidth < 768;
+
+    if (isTargetComplex) {
+      // ADVANCED WORKBENCH ENGINE RENDER: 
+      // Render the massive structural background protein as smooth schematic ribbon loops
+      component.addRepresentation("cartoon", { 
+        colorScheme: "chainname",
+        opacity: 0.7,
+        quality: isMobileDevice ? "low" : "high"
+      });
+      
+      // Isolate and pop just the tiny drug ligand compound embedded in the active site pocket
+      component.addRepresentation("ball+stick", { 
+        sele: "ligand",
+        radiusScale: 1.4,
+        aspectRatio: 1.5,
+        colorScheme: "element",
+        quality: isMobileDevice ? "low" : "high"
+      });
+    } else {
+      // STANDALONE COMPOUND REGULAR RENDER STYLE:
+      component.addRepresentation(renderStyle, { 
+        radiusScale: renderStyle === 'spacefill' ? 0.8 : 1.3, 
+        aspectRatio: 1.5,
+        multipleBond: "symmetric",
+        colorScheme: "element", 
+        quality: isMobileDevice ? "low" : "high"
+      });
+    }
     
     stageRef.current.handleResize();
     stageRef.current.autoView();
@@ -245,7 +271,7 @@ const App = () => {
     if (isSpinningRef.current) {
       stageRef.current.setSpin([0, 1, 0], 0.005);
     }
-  }, [renderStyle]);
+  }, [renderStyle, isTargetComplex]);
 
   // 2. Extracted Core Structural Engine Runner wrapped with useCallback
   const loadStructure = useCallback(async () => {
@@ -259,7 +285,18 @@ const App = () => {
       setDistanceInterpretation('');
       componentRef.current = null;
       
-      let targetCid = MOLECULE_DATABASE[selectedMol]?.cid;
+      const targetMeta = MOLECULE_DATABASE[selectedMol];
+
+      // Step A: Check if it is a specialized macro-biological structural complex from RCSB PDB
+      if (targetMeta?.rcsbId) {
+        stageRef.current.loadFile(`rcsb://${targetMeta.rcsbId}`)
+          .then((component) => renderComponent(component))
+          .catch(() => setIsLoading(false));
+        return;
+      }
+
+      // Step B: Otherwise execute traditional small molecule pipeline via PubChem
+      let targetCid = targetMeta?.cid;
       
       if (!targetCid) {
         const searchRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(selectedMol)}/property/Title/JSON`);
@@ -335,9 +372,15 @@ const App = () => {
       stageRef.current.signals.hovered.add((pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
           const atom = pickingProxy.atom;
+          // Build string to denote structural segment origins
+          let locationContext = `Atom Index Reference: #${atom.index}`;
+          if (atom.resname) {
+            locationContext = `Residue Pocket: [${atom.resname}]${atom.resno} | Chain: ${atom.chainname}`;
+          }
+
           setHoveredAtom({
             element: atom.element,
-            index: atom.index,
+            index: locationContext,
             x: atom.x.toFixed(2),
             y: atom.y.toFixed(2),
             z: atom.z.toFixed(2)
@@ -378,15 +421,30 @@ const App = () => {
       const numDist = parseFloat(dist);
       let interpretation = "";
 
-      if (numDist >= 1.0 && numDist <= 1.6) {
-        interpretation = "👉 Covalent Bond Detected: This is a direct atomic link. Used by chemists to analyze primary structural stability and molecular formula frameworks.";
-      } else if (numDist > 1.6 && numDist <= 2.5) {
-        interpretation = "👉 Steric Hindrance / Repulsion Zone: These atoms are packed tightly together. Used in drug design to check if a molecule will experience inner strain and change its shape.";
-      } else if (numDist > 2.5 && numDist <= 3.5) {
-        interpretation = "👉 Hydrogen Bonding Interaction: A crucial non-bonded attraction. This is exactly WHERE and HOW a drug molecule clings tightly to human cell receptors and dissolves in water.";
+      if (isTargetComplex) {
+        // CONTEXT-AWARE METRICS TYPE 1: Protein-Ligand Interface
+        if (numDist >= 1.0 && numDist <= 2.2) {
+          interpretation = "⚠️ Extreme Steric Clash / Overlap: Proximity index is too tight. Represents structural spatial geometry collisions or rigid unnatural overlaps inside the receptor pocket.";
+        } else if (numDist > 2.2 && numDist <= 3.4) {
+          interpretation = "⚡ Hydrogen Bond Binding Lock: Perfect interaction range! This is exactly WHERE and HOW the drug compound physically anchors to the receptor walls to shut down active disease mechanics.";
+        } else if (numDist > 3.4 && numDist <= 4.5) {
+          interpretation = "🧬 Hydrophobic Interaction / Van der Waals Bounds: Shows lipophilic surface contact. Essential for computing binding stability metrics inside the grease pockets of enzyme pathways.";
+        } else {
+          interpretation = "🌐 Distant Non-Interacting Nodes: The distance is outside localized affinity boundaries. Shows no active structural binding contribution at this specific geometric node pair.";
+        }
       } else {
-        interpretation = "👉 Macro-Spatial Width / Conformation Span: This measures the total size threshold across distant branches. Used to verify if the drug molecule can physically fit into a receptor target pocket.";
+        // CONTEXT-AWARE METRICS TYPE 2: Standalone Compound Framework
+        if (numDist >= 1.0 && numDist <= 1.6) {
+          interpretation = "👉 Intramolecular Covalent Link: Measures stable backbone links. Defines the rigid skeletal shape of this single, standalone compound asset.";
+        } else if (numDist > 1.6 && numDist <= 2.5) {
+          interpretation = "👉 Intramolecular Steric Strain Layer: Crowded sub-atomic zone. High internal pressure here forces the standalone molecule to bend or twist into specific shapes.";
+        } else if (numDist > 2.5 && numDist <= 3.5) {
+          interpretation = "👉 Internal Hydrogen Bond Potential: Identifies polar atom gaps. This spacing controls how cleanly this molecule will mix with water solvents later.";
+        } else {
+          interpretation = "👉 Molecular Conformation Span: Tracks total spatial envelope length. Essential for calculating if the overall size profile crosses the threshold to fit into target enzyme pockets.";
+        }
       }
+      
       setDistanceInterpretation(interpretation);
 
       if (componentRef.current) {
@@ -409,7 +467,7 @@ const App = () => {
       setCalculatedDistance(null);
       setDistanceInterpretation('');
     }
-  }, [selectedAtoms]);
+  }, [selectedAtoms, isTargetComplex]);
 
   // Trigger whenever structural choice dependencies update
   useEffect(() => {
@@ -485,12 +543,12 @@ const App = () => {
           <div style={styles.logoBadge}>⚛️</div>
           <div>
             <h1 style={styles.appTitle}>Chemistry Architecture Studio</h1>
-            <p style={styles.appSubtitle}>High-Fidelity Bio-Spatial Analytics & Lattice Mapping</p>
+            <p style={styles.appSubtitle}>High-Fidelity Bio-Spatial Analytics & Target Binding Workbench</p>
           </div>
         </div>
         {!isMobile && (
           <div style={styles.headerRightMenu}>
-            <div style={styles.statusPill}><span style={styles.pulseDot}></span>SYSTEM ENGINE ONLINE</div>
+            <div style={styles.statusPill}><span style={styles.pulseDot}></span>DISCOVERY ENGINE ONLINE</div>
           </div>
         )}
       </header>
@@ -509,7 +567,7 @@ const App = () => {
           />
           
           <div style={styles.tabGroup}>
-            {['All', 'Neurochemistry', 'Complex Bio-agents', 'Chemical Solvents', 'Nanotech'].map(tab => (
+            {['All', 'Target Complex', 'Neurochemistry', 'Complex Bio-agents', 'Chemical Solvents', 'Nanotech'].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={activeTab === tab ? styles.activeTab : styles.inactiveTab}>
                 {tab}
               </button>
@@ -517,10 +575,10 @@ const App = () => {
           </div>
 
           <div style={styles.sidebarLabel}>Lattice Asset Registry ({filteredMolecules.length})</div>
-          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '180px' : 'none'}}>
+          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '220px' : 'none'}}>
             {filteredMolecules.map(name => (
               <div key={name} onClick={() => { setDynamicDetails(null); setSelectedMol(name); }} style={selectedMol === name && !dynamicDetails ? styles.activeCard : styles.inactiveCard}>
-                <div style={styles.cardIcon}>⚡</div>
+                <div style={styles.cardIcon}>{MOLECULE_DATABASE[name].category === 'Target Complex' ? '🧬' : '⚡'}</div>
                 <div>
                   <div style={styles.cardTitle}>{name}</div>
                   <div style={styles.cardSubtitle}>{MOLECULE_DATABASE[name].sub}</div>
@@ -531,9 +589,11 @@ const App = () => {
         </aside>
 
         {/* Center Main WebGL Viewport Wrapper */}
-        <main style={{...styles.viewportWrapper, height: isMobile ? '500px' : 'auto', minHeight: isMobile ? '500px' : 'none'}}>
+        <main style={{...styles.viewportWrapper, height: isMobile ? '400px' : 'auto', minHeight: isMobile ? '400px' : 'none'}}>
           <div style={styles.canvasMetaBlock}>
-            <span style={styles.categoryTag}>{currentDetails.category.toUpperCase()}</span>
+            <span style={{...styles.categoryTag, color: isTargetComplex ? '#ff0055' : '#00fff5', borderColor: isTargetComplex ? 'rgba(255,0,85,0.3)' : 'rgba(0,255,245,0.2)'}}>
+              {currentDetails.category.toUpperCase()}
+            </span>
             <h2 style={styles.mainCanvasTitle}>{selectedMol.toUpperCase()}</h2>
             <p style={styles.mainCanvasSubtitle}>{currentDetails.sub}</p>
           </div>
@@ -542,7 +602,7 @@ const App = () => {
           {hoveredAtom && (
             <div style={styles.hoverTooltip}>
               <div style={{color: '#00fff5', fontWeight: 'bold', letterSpacing: '0.5px'}}>NODE TARGET: {hoveredAtom.element}</div>
-              <div style={{fontSize: '10px', color: '#6e7681', marginTop: '3px'}}>Index Vector Reference: #{hoveredAtom.index}</div>
+              <div style={{fontSize: '10px', color: '#8b949e', marginTop: '3px'}}>{hoveredAtom.index}</div>
               <div style={styles.coordinatesRow}>
                 X: {hoveredAtom.x} | Y: {hoveredAtom.y} | Z: {hoveredAtom.z}
               </div>
@@ -560,11 +620,17 @@ const App = () => {
           <div ref={initCanvasRef} style={styles.canvasTarget}></div>
 
           {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
-          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', left: isMobile ? '4%' : '20px', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
-            <div style={styles.renderToggleGroup}>
-              <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
-              <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
-            </div>
+          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
+            {!isTargetComplex ? (
+              <div style={styles.renderToggleGroup}>
+                <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
+                <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
+              </div>
+            ) : (
+              <div style={{fontSize: '10px', fontWeight: 'bold', color: '#ff0055', background: 'rgba(255,0,85,0.06)', padding: '0 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', border: '1px solid rgba(255,0,85,0.2)', height: '28px'}}>
+                AUTO RENDERING: CARTOON RECEPTOR + LIGAND POCKET
+              </div>
+            )}
             <div style={{width: '1px', background: '#21262d', margin: '0 4px'}} />
             <button onClick={() => triggerCameraAction('reset')} style={styles.dockBtn} title="Reset Viewport">🪐</button>
             <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 14px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>
@@ -585,15 +651,21 @@ const App = () => {
                     Vector Node 1: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[0]?.element || '?'}]</span> | Vector Node 2: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[1]?.element || '?'}]</span>
                   </div>
 
-                  <div style={styles.interpretationCard}>
-                    <span style={{ color: '#00ff96', fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.5px' }}>REAL-WORLD USE CASE ANALYSIS:</span>
+                  <div style={{...styles.interpretationCard, borderLeftColor: isTargetComplex ? '#ff0055' : '#00ff96'}}>
+                    <span style={{ color: isTargetComplex ? '#ff0055' : '#00ff96', fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.5px' }}>
+                      {isTargetComplex ? "INTERMOLECULAR BINDING METRICS:" : "INTRAMOLECULAR CONFORMATION ANALYSIS:"}
+                    </span>
                     <p style={{ margin: '6px 0 0 0', color: '#acbac7', fontSize: '11px', lineHeight: '1.45' }}>{distanceInterpretation}</p>
                   </div>
 
                   <button onClick={() => setSelectedAtoms([])} style={styles.clearBtn}>RESET VECTOR ARRAY</button>
                 </div>
               ) : (
-                <div style={styles.placeholderText}>Awaiting viewport coordinate node collection...</div>
+                <div style={styles.placeholderText}>
+                  {isTargetComplex 
+                    ? "Click an atom on the drug ligand and one on the ribbon loop target to evaluate binding affinity limits..." 
+                    : "Awaiting viewport coordinate node collection..."}
+                </div>
               )}
             </div>
           </div>
@@ -603,7 +675,7 @@ const App = () => {
             <div style={styles.useCaseContainer}>
               {currentDetails.useCases ? (
                 currentDetails.useCases.map((uc, idx) => (
-                  <div key={idx} style={styles.useCaseCard}>
+                  <div key={idx} style={{...styles.useCaseCard, borderLeftColor: isTargetComplex ? '#ff0055' : '#00fff5'}}>
                     <div style={styles.useCaseLabel}>{uc.area}</div>
                     <div style={styles.useCaseBody}>{uc.detail}</div>
                   </div>
@@ -656,34 +728,34 @@ const styles = {
   itemScrollList: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' },
   inactiveCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.01)' },
   activeCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', background: 'linear-gradient(135deg, #161b22, #0d1117)', border: '1px solid #00fff5' },
-  cardIcon: { fontSize: '12px', background: '#07090e', padding: '6px 8px', borderRadius: '6px', border: '1px solid #21262d', color: '#00fff5' },
+  cardIcon: { fontSize: '12px', background: '#07090e', padding: '6px 8px', borderRadius: '6px', border: '1px solid #21262d', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: '13px', fontWeight: '600', color: '#f0f6fc' },
   cardSubtitle: { fontSize: '11px', color: '#6e7681', marginTop: '3px' },
   viewportWrapper: { flex: 1, position: 'relative', background: '#07090e', minWidth: 0 },
   canvasMetaBlock: { position: 'absolute', top: '20px', left: '20px', zIndex: 10, pointerEvents: 'none' },
-  categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '2px 6px', borderRadius: '4px' },
+  categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', padding: '2px 6px', borderRadius: '4px', border: '1px solid' },
   mainCanvasTitle: { margin: '6px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#f0f6fc', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' },
   mainCanvasSubtitle: { margin: '2px 0 0 0', fontSize: '12px', color: '#8b949e' },
-  canvasTarget: { width: '100%', height: '100%', minHeight: '100%', backgroundColor: '#0a0d12' },
+  canvasTarget: { width: '100%', height: '100%', minHeight: '400px', backgroundColor: '#0a0d12' },
   hoverTooltip: { position: 'absolute', bottom: '85px', left: '20px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', padding: '10px 14px', borderRadius: '10px', fontSize: '11px' },
   coordinatesRow: { fontSize: '10px', fontFamily: 'monospace', color: '#00ff96', marginTop: '4px' },
   loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'rgba(7, 9, 14, 0.95)', padding: '20px', borderRadius: '12px', border: '1px solid #00fff5' },
   spinner: { width: '28px', height: '28px', border: '3px solid rgba(0,255,245,0.1)', borderTop: '3px solid #00fff5', borderRadius: '50%' },
-  floatingControlsDock: { position: 'absolute', zIndex: 10, display: 'flex', gap: '6px', background: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(10px)', padding: '8px 12px', borderRadius: '14px', border: '1px solid #21262d' },
+  floatingControlsDock: { position: 'absolute', zIndex: 10, display: 'flex', gap: '6px', background: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(10px)', padding: '8px 12px', borderRadius: '14px', border: '1px solid #21262d', alignItems: 'center' },
   renderToggleGroup: { display: 'flex', background: '#07090e', padding: '2px', borderRadius: '8px', border: '1px solid #21262d' },
-  activeToggleBtn: { border: 'none', background: '#1f242c', color: '#00fff5', fontSize: '10px', fontWeight: 'bold', padding: '0 10px', borderRadius: '6px', height: '28px' },
-  inactiveToggleBtn: { border: 'none', background: 'transparent', color: '#8b949e', fontSize: '10px', padding: '0 10px', borderRadius: '6px', height: '28px' },
+  activeToggleBtn: { border: 'none', background: '#1f242c', color: '#00fff5', fontSize: '10px', fontWeight: 'bold', padding: '0 10px', borderRadius: '6px', height: '28px', cursor: 'pointer' },
+  inactiveToggleBtn: { border: 'none', background: 'transparent', color: '#8b949e', fontSize: '10px', padding: '0 10px', borderRadius: '6px', height: '28px', cursor: 'pointer' },
   dockBtn: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', color: '#c9d1d9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' },
   rightSidebar: { background: '#0b0e14', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
   propertyWidget: { display: 'flex', flexDirection: 'column' },
   metricResultContainer: { border: '1px dashed #2d3748', borderRadius: '10px', padding: '16px', marginTop: '8px', textAlign: 'center', background: '#07090e' },
   metricValue: { fontSize: '28px', fontWeight: '800', color: '#00ff96' },
   metricDetails: { fontSize: '11px', color: '#8b949e', marginTop: '6px' },
-  interpretationCard: { marginTop: '12px', padding: '10px', backgroundColor: '#131722', borderRadius: '8px', borderLeft: '3px solid #00ff96', textAlign: 'left' },
-  placeholderText: { fontSize: '11px', color: '#556275', fontStyle: 'italic' },
-  clearBtn: { marginTop: '12px', width: '100%', padding: '8px', background: 'rgba(255,0,85,0.06)', border: '1px solid #ff0055', color: '#ff0055', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' },
+  interpretationCard: { marginTop: '12px', padding: '10px', backgroundColor: '#131722', borderRadius: '8px', borderLeft: '3px solid', textAlign: 'left' },
+  placeholderText: { fontSize: '11px', color: '#556275', fontStyle: 'italic', lineHeight: '1.4' },
+  clearBtn: { marginTop: '12px', width: '100%', padding: '8px', background: 'rgba(255,0,85,0.06)', border: '1px solid #ff0055', color: '#ff0055', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer' },
   useCaseContainer: { display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' },
-  useCaseCard: { background: '#12161f', borderLeft: '3px solid #00fff5', borderRadius: '0 6px 6px 0', padding: '10px 12px' },
+  useCaseCard: { background: '#12161f', borderLeft: '3px solid', borderRadius: '0 6px 6px 0', padding: '10px 12px' },
   useCaseLabel: { fontSize: '10px', fontWeight: 'bold', color: '#58a6ff', textTransform: 'uppercase' },
   useCaseBody: { fontSize: '11px', color: '#c9d1d9', lineHeight: '1.4', marginTop: '2px' },
   detailsTable: { width: '100%', borderCollapse: 'collapse', marginTop: '8px' },
