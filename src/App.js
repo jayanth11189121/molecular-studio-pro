@@ -229,6 +229,14 @@ const App = () => {
         fogFar: 100
       });
 
+      // Force view and layout computation right after mounting to prevent blank canvas issues
+      setTimeout(() => {
+        if (stageRef.current) {
+          stageRef.current.handleResize();
+          stageRef.current.autoView();
+        }
+      }, 150);
+
       // Click Signal Engine
       stageRef.current.signals.clicked.add((pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
@@ -347,19 +355,17 @@ const App = () => {
         }
 
         if (targetCid) {
-          // Attempt loading the native 3D file structure map first
+          // Absolute secure connection string to bypass mixed-content blocks on hosted pages
           const threeDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
           
           try {
             const checkResponse = await fetch(threeDUrl);
             const checkText = await checkResponse.text();
             
-            // If PubChem replies with an empty file container or error statement, trigger the fallback loader
             if (!checkText || checkText.trim() === "" || checkText.includes("Status: Status_NoData") || checkText.includes("Fault")) {
               throw new Error("No 3D asset hosted for this element profile");
             }
 
-            // If 3D coordinates exist, safely mount them into WebGL viewport
             const blob = new Blob([checkText], { type: 'text/plain' });
             stageRef.current.loadFile(blob, { ext: "sdf" })
               .then((component) => renderComponent(component));
@@ -367,7 +373,6 @@ const App = () => {
           } catch (fallbackError) {
             console.warn(`3D source layout unavailable for ${selectedMol}. Engaging automated 2D coordinates conversion fallback...`);
             
-            // FALLBACK ENGINE: Loads structural configuration and forces NGL viewer layout generation
             const twoDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=2d`;
             stageRef.current.loadFile(twoDUrl, { ext: "sdf" })
               .then((component) => renderComponent(component))
@@ -385,7 +390,6 @@ const App = () => {
       }
     };
 
-    // Sub-helper structure inside load sequence to maintain aesthetic view preferences across draws
     const renderComponent = (component) => {
       componentRef.current = component;
       component.addRepresentation(renderStyle, { 
@@ -397,9 +401,9 @@ const App = () => {
       });
       
       stageRef.current.autoView();
+      stageRef.current.handleResize(); // Force dimensions to recalculate on layout draw
       setIsLoading(false);
       
-      // Reading from ref now instead of primitive state to clear the dependency array cleanly
       if (isSpinningRef.current) {
         stageRef.current.setSpin([0, 1, 0], 0.005);
       }
@@ -457,7 +461,10 @@ const App = () => {
     if (!stageRef.current) return;
     if (action === 'zoomIn') stageRef.current.viewerControls.zoom(0.15);
     if (action === 'zoomOut') stageRef.current.viewerControls.zoom(-0.15);
-    if (action === 'reset') stageRef.current.autoView();
+    if (action === 'reset') {
+      stageRef.current.autoView();
+      stageRef.current.handleResize();
+    }
     if (action === 'spin') setIsSpinning(!isSpinning);
   };
 
@@ -577,7 +584,6 @@ const App = () => {
                     Vector Node 1: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[0]?.element || '?'}]</span> | Vector Node 2: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[1]?.element || '?'}]</span>
                   </div>
 
-                  {/* DYNAMIC INFORMATION CARD FOR REAL-WORLD APPLICATIONS */}
                   <div style={styles.interpretationCard}>
                     <span style={{ color: '#00ff96', fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.5px' }}>REAL-WORLD USE CASE ANALYSIS:</span>
                     <p style={{ margin: '6px 0 0 0', color: '#acbac7', fontSize: '11px', lineHeight: '1.45' }}>{distanceInterpretation}</p>
@@ -591,7 +597,6 @@ const App = () => {
             </div>
           </div>
 
-          {/* Interactive Industrial & Clinical Use Case Sector */}
           <div style={styles.propertyWidget}>
             <div style={styles.sidebarLabel}>Industrial & Clinical Applications</div>
             <div style={styles.useCaseContainer}>
@@ -656,35 +661,18 @@ const styles = {
   viewportWrapper: { flex: 1, position: 'relative', background: 'radial-gradient(circle at center, #101520 0%, #07090e 100%)' },
   canvasMetaBlock: { position: 'absolute', top: '28px', left: '28px', zIndex: 10, pointerEvents: 'none' },
   categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '3px 8px', borderRadius: '4px', letterSpacing: '1px' },
-  
-  mainCanvasTitle: { 
-    margin: '8px 0 0 0', 
-    fontSize: '32px', 
-    fontWeight: '900', 
-    color: '#f0f6fc', 
-    letterSpacing: '-0.5px', 
-    textShadow: '0 4px 12px rgba(0,0,0,0.5)',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    maxWidth: '550px'
-  },
-  
+  mainCanvasTitle: { margin: '8px 0 0 0', fontSize: '32px', fontWeight: '900', color: '#f0f6fc', letterSpacing: '-0.5px', textShadow: '0 4px 12px rgba(0,0,0,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '550px' },
   mainCanvasSubtitle: { margin: '4px 0 0 0', fontSize: '13px', color: '#8b949e', fontWeight: '500' },
   floatingHelpBadge: { position: 'absolute', top: '28px', right: '28px', zIndex: 10, background: 'rgba(13, 17, 23, 0.8)', border: '1px solid #21262d', backdropFilter: 'blur(10px)', padding: '12px 18px', borderRadius: '12px', fontSize: '11px', color: '#c9d1d9', maxWidth: '360px', lineHeight: '1.5', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' },
-  
   hoverTooltip: { position: 'absolute', bottom: '105px', left: '28px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', boxShadow: '0 0 20px rgba(0,255,245,0.25)', padding: '12px 16px', borderRadius: '10px', fontSize: '11px', pointerEvents: 'none', backdropFilter: 'blur(8px)' },
   coordinatesRow: { fontSize: '11px', fontFamily: 'monospace', color: '#00ff96', marginTop: '6px', background: 'rgba(0,255,150,0.05)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(0,255,150,0.1)' },
-  
   canvasTarget: { width: '100%', height: '100%' },
   loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', background: 'rgba(7, 9, 14, 0.95)', padding: '30px', borderRadius: '16px', border: '1px solid #00fff5', boxShadow: '0 0 30px rgba(0,255,245,0.2)' },
   spinner: { width: '36px', height: '36px', border: '3px solid rgba(0,255,245,0.1)', borderTop: '3px solid #00fff5', borderRadius: '50%' },
-  
   floatingControlsDock: { position: 'absolute', bottom: '36px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', gap: '10px', background: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(16px)', padding: '10px 18px', borderRadius: '16px', border: '1px solid #21262d', boxShadow: '0 10px 40px rgba(0,0,0,0.6)' },
   renderToggleGroup: { display: 'flex', background: '#07090e', padding: '3px', borderRadius: '10px', border: '1px solid #21262d', gap: '2px' },
   activeToggleBtn: { border: 'none', background: '#1f242c', color: '#00fff5', fontSize: '10px', fontWeight: 'bold', padding: '0 12px', borderRadius: '8px', cursor: 'pointer', height: '32px' },
   inactiveToggleBtn: { border: 'none', background: 'transparent', color: '#8b949e', fontSize: '10px', padding: '0 12px', borderRadius: '8px', cursor: 'pointer', height: '32px', transition: 'color 0.2s' },
-  
   dockBtn: { width: '38px', height: '38px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', color: '#c9d1d9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' },
   rightSidebar: { width: '340px', background: '#0b0e14', borderLeft: '1px solid #1f242c', padding: '24px', display: 'flex', flexDirection: 'column', gap: '22px', overflowY: 'auto' },
   propertyWidget: { display: 'flex', flexDirection: 'column' },
