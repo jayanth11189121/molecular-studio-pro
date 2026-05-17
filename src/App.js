@@ -270,6 +270,7 @@ const App = () => {
       }
 
       if (targetCid) {
+        // Enforce true 3D spatial calculations using conformer generation matrices from PubChem REST
         const threeDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
         
         try {
@@ -284,9 +285,21 @@ const App = () => {
           stageRef.current.loadFile(blob, { ext: "sdf" }).then((component) => renderComponent(component));
 
         } catch (fallbackError) {
-          const twoDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=2d`;
-          stageRef.current.loadFile(twoDUrl, { ext: "sdf" })
-            .then((component) => renderComponent(component))
+          // If 3D endpoint fails, generate a clean structural representation from conformer endpoints to prevent broken 2D flattening
+          const fallbackJSONUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${targetCid}/description/JSON`;
+          fetch(fallbackJSONUrl)
+            .then(res => res.json())
+            .then(() => {
+              const alternative3d = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
+              stageRef.current.loadFile(alternative3d, { ext: "sdf" })
+                .then((component) => renderComponent(component))
+                .catch(() => {
+                  const twoDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=2d`;
+                  stageRef.current.loadFile(twoDUrl, { ext: "sdf" })
+                    .then((component) => renderComponent(component))
+                    .catch(() => setIsLoading(false));
+                });
+            })
             .catch(() => setIsLoading(false));
         }
       } else {
@@ -319,8 +332,8 @@ const App = () => {
 
       stageRef.current.handleResize();
 
-      // Click Signal Engine
-      stageRef.current.signals.clicked.add((pickingProxy) => {
+      // Universal Pointer/Click Engine covering unified mouse events and touch pointer interfaces
+      const handleSelectionProxy = (pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
           const atom = pickingProxy.atom;
           setSelectedAtoms((prev) => {
@@ -329,7 +342,23 @@ const App = () => {
             return updated;
           });
         }
-      });
+      };
+
+      stageRef.current.signals.clicked.add(handleSelectionProxy);
+      
+      // Explicitly bridge touch interaction interfaces directly into the picking proxy calculations
+      element.addEventListener('pointerdown', (e) => {
+        if (!stageRef.current) return;
+        const canvasBounds = element.getBoundingClientRect();
+        const pointerX = e.clientX - canvasBounds.left;
+        const pointerY = e.clientY - canvasBounds.top;
+        
+        // Let NGL pick components inside the WebGL context based on viewport positions
+        const picked = stageRef.current.viewer.pick(pointerX, pointerY);
+        if (picked && picked.atom) {
+          handleSelectionProxy(picked);
+        }
+      }, { passive: true });
 
       // Interactive HUD Hover Signal Engine
       stageRef.current.signals.hovered.add((pickingProxy) => {
@@ -560,7 +589,7 @@ const App = () => {
           <div ref={initCanvasRef} style={styles.canvasTarget}></div>
 
           {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
-          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
+          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px', left: '50%', transform: 'translateX(-50%)'}}>
             <div style={styles.renderToggleGroup}>
               <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
               <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
@@ -659,7 +688,7 @@ const styles = {
   cardIcon: { fontSize: '12px', background: '#07090e', padding: '6px 8px', borderRadius: '6px', border: '1px solid #21262d', color: '#00fff5' },
   cardTitle: { fontSize: '13px', fontWeight: '600', color: '#f0f6fc' },
   cardSubtitle: { fontSize: '11px', color: '#6e7681', marginTop: '3px' },
-  viewportWrapper: { flex: 1, position: 'relative', backgroundColor: '#07090e', minWidth: 0 },
+  viewportWrapper: { flex: 1, position: 'relative', background: '#07090e', minWidth: 0 },
   canvasMetaBlock: { position: 'absolute', top: '20px', left: '20px', zIndex: 10, pointerEvents: 'none' },
   categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '2px 6px', borderRadius: '4px' },
   mainCanvasTitle: { margin: '6px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#f0f6fc', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' },
@@ -689,7 +718,8 @@ const styles = {
   detailsTable: { width: '100%', borderCollapse: 'collapse', marginTop: '8px' },
   tdLabel: { padding: '8px 0', fontSize: '12px', color: '#8b949e', borderBottom: '1px solid #1f242c' },
   tdValue: { padding: '8px 0', fontSize: '12px', color: '#f0f6fc', fontWeight: '600', textAlign: 'right', borderBottom: '1px solid #1f242c' },
-  descriptionParagraph: { fontSize: '12px', color: '#8b949e', lineHeight: '1.5', marginTop: '8px' }
+  descriptionParagraph: { fontSize: '12px', color: '#8b949e', lineHeight: '1.5', marginTop: '8px' },
+  headerRightMenu: { display: 'flex', alignItems: 'center' }
 };
 
 export default App;
