@@ -185,8 +185,6 @@ const App = () => {
   const [calculatedDistance, setCalculatedDistance] = useState(null);
   const [distanceInterpretation, setDistanceInterpretation] = useState('');
 
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
-
   const stageRef = useRef(null);
   const componentRef = useRef(null);
   const distanceRepRef = useRef(null);
@@ -198,7 +196,6 @@ const App = () => {
 
   useEffect(() => {
     const handleWindowResize = () => {
-      setWindowWidth(window.innerWidth);
       if (stageRef.current) {
         stageRef.current.handleResize();
       }
@@ -220,7 +217,6 @@ const App = () => {
     ]
   };
 
-  // 1. Core Molecular Component Geometry Rendering Helper
   const renderComponent = useCallback((component) => {
     componentRef.current = component;
     component.addRepresentation(renderStyle, { 
@@ -228,7 +224,7 @@ const App = () => {
       aspectRatio: 1.5,
       multipleBond: "symmetric",
       colorScheme: "element", 
-      quality: window.innerWidth < 768 ? "low" : "high"
+      quality: "low" // Optimized universally for mobile computing limits
     });
     
     stageRef.current.handleResize();
@@ -247,7 +243,6 @@ const App = () => {
     }
   }, [renderStyle]);
 
-  // 2. Extracted Core Structural Engine Runner wrapped with useCallback
   const loadStructure = useCallback(async () => {
     if (!stageRef.current) return;
     setIsLoading(true);
@@ -297,15 +292,12 @@ const App = () => {
     }
   }, [selectedMol, renderComponent]);
 
-  // Safe callback ref strategy for perfect Canvas DOM initialization
   const initCanvasRef = (element) => {
     if (element && !stageRef.current) {
-      const isMobileDevice = window.innerWidth < 768;
-      
       stageRef.current = new NGL.Stage(element, { 
         backgroundColor: '#0a0d12', 
-        sampleLevel: isMobileDevice ? 0 : 3, 
-        impostor: !isMobileDevice 
+        sampleLevel: 0, 
+        impostor: false 
       });
       
       stageRef.current.setParameters({
@@ -319,7 +311,6 @@ const App = () => {
 
       stageRef.current.handleResize();
 
-      // Click Signal Engine
       stageRef.current.signals.clicked.add((pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
           const atom = pickingProxy.atom;
@@ -331,7 +322,6 @@ const App = () => {
         }
       });
 
-      // Interactive HUD Hover Signal Engine
       stageRef.current.signals.hovered.add((pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
           const atom = pickingProxy.atom;
@@ -353,7 +343,6 @@ const App = () => {
     }
   };
 
-  // 3. Clear & Redraw Metric Measurement Layers
   useEffect(() => {
     if (distanceRepRef.current && componentRef.current) {
       try {
@@ -379,13 +368,13 @@ const App = () => {
       let interpretation = "";
 
       if (numDist >= 1.0 && numDist <= 1.6) {
-        interpretation = "👉 Covalent Bond Detected: This is a direct atomic link. Used by chemists to analyze primary structural stability and molecular formula frameworks.";
+        interpretation = "👉 Covalent Bond";
       } else if (numDist > 1.6 && numDist <= 2.5) {
-        interpretation = "👉 Steric Hindrance / Repulsion Zone: These atoms are packed tightly together. Used in drug design to check if a molecule will experience inner strain and change its shape.";
+        interpretation = "👉 Steric Repulsion Zone";
       } else if (numDist > 2.5 && numDist <= 3.5) {
-        interpretation = "👉 Hydrogen Bonding Interaction: A crucial non-bonded attraction. This is exactly WHERE and HOW a drug molecule clings tightly to human cell receptors and dissolves in water.";
+        interpretation = "👉 Hydrogen Bonding Interaction";
       } else {
-        interpretation = "👉 Macro-Spatial Width / Conformation Span: This measures the total size threshold across distant branches. Used to verify if the drug molecule can physically fit into a receptor target pocket.";
+        interpretation = "👉 Spatial Span Width";
       }
       setDistanceInterpretation(interpretation);
 
@@ -395,11 +384,11 @@ const App = () => {
         const newRep = componentRef.current.addRepresentation("distance", {
           atomPair: targetPair,
           labelColor: "#00ffcc",   
-          labelSize: 2.5,
+          labelSize: 2.0,
           labelFont: "sans-serif",
           labelVisible: true,
           lineColor: "#ff2a6d",    
-          lineWidth: 4.0,
+          lineWidth: 3.0,
           name: "distance-layer"   
         });
         
@@ -411,12 +400,10 @@ const App = () => {
     }
   }, [selectedAtoms]);
 
-  // Trigger whenever structural choice dependencies update
   useEffect(() => {
     loadStructure();
   }, [loadStructure]);
 
-  // 4. Global Animation Toggle Controller Loop
   useEffect(() => {
     if (!stageRef.current) return;
     if (isSpinning) {
@@ -437,7 +424,7 @@ const App = () => {
           sub: 'Queried Spatial Asset',
           formula: prop.MolecularFormula,
           weight: `${prop.MolecularWeight} g/mol`,
-          type: 'Organic/Inorganic Compound Matrix',
+          type: 'Organic Compound Matrix',
           source: 'PubChem Global Registry',
           description: `Successfully instantiated ${name} from chemical cloud indexes. Structural configuration metrics are calculated down to spatial vector schemas.`,
           useCases: [
@@ -476,32 +463,25 @@ const App = () => {
     return MOLECULE_DATABASE[name].category === activeTab;
   });
 
-  const isMobile = windowWidth < 1024;
-
   return (
-    <div style={{...styles.appContainer, height: isMobile ? 'auto' : '100vh', overflowY: isMobile ? 'auto' : 'hidden'}}>
+    <div style={styles.appContainer}>
       <header style={styles.topHeader}>
         <div style={styles.brandGroup}>
           <div style={styles.logoBadge}>⚛️</div>
           <div>
             <h1 style={styles.appTitle}>Chemistry Architecture Studio</h1>
-            <p style={styles.appSubtitle}>High-Fidelity Bio-Spatial Analytics & Lattice Mapping</p>
+            <p style={styles.appSubtitle}>High-Fidelity Bio-Spatial Analytics</p>
           </div>
         </div>
-        {!isMobile && (
-          <div style={styles.headerRightMenu}>
-            <div style={styles.statusPill}><span style={styles.pulseDot}></span>SYSTEM ENGINE ONLINE</div>
-          </div>
-        )}
       </header>
 
-      <div style={{...styles.workspace, flexDirection: isMobile ? 'column' : 'row', overflow: isMobile ? 'visible' : 'hidden'}}>
-        {/* Left Side Sidebar Panel */}
-        <aside style={{...styles.leftSidebar, width: isMobile ? '100%' : '310px', boxSizing: 'border-box', borderRight: isMobile ? 'none' : '1px solid #1f242c', borderBottom: isMobile ? '1px solid #1f242c' : 'none'}}>
-          <div style={styles.sidebarLabel}>Compound Lookup Matrix</div>
+      {/* Forced Row Workspace for Desktop Layout Aspect */}
+      <div style={styles.workspace}>
+        {/* Left Sidebar - Extremely Compact */}
+        <aside style={styles.leftSidebar}>
           <input 
             type="text" 
-            placeholder="Search compounds (e.g., Ethanol)..." 
+            placeholder="Search..." 
             style={styles.searchBar}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -509,126 +489,99 @@ const App = () => {
           />
           
           <div style={styles.tabGroup}>
-            {['All', 'Neurochemistry', 'Complex Bio-agents', 'Chemical Solvents', 'Nanotech'].map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={activeTab === tab ? styles.activeTab : styles.inactiveTab}>
-                {tab}
-              </button>
-            ))}
+            {['All', 'Neuro', 'Bio-agents', 'Solvents', 'Nanotech'].map(tab => {
+              const fullCategoryMap = { 'Neuro': 'Neurochemistry', 'Bio-agents': 'Complex Bio-agents', 'Solvents': 'Chemical Solvents' };
+              const analyticalTarget = fullCategoryMap[tab] || tab;
+              return (
+                <button key={tab} onClick={() => setActiveTab(analyticalTarget)} style={activeTab === analyticalTarget ? styles.activeTab : styles.inactiveTab}>
+                  {tab}
+                </button>
+              );
+            })}
           </div>
 
-          <div style={styles.sidebarLabel}>Lattice Asset Registry ({filteredMolecules.length})</div>
-          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '180px' : 'none'}}>
+          <div style={styles.itemScrollList}>
             {filteredMolecules.map(name => (
               <div key={name} onClick={() => { setDynamicDetails(null); setSelectedMol(name); }} style={selectedMol === name && !dynamicDetails ? styles.activeCard : styles.inactiveCard}>
-                <div style={styles.cardIcon}>⚡</div>
-                <div>
-                  <div style={styles.cardTitle}>{name}</div>
-                  <div style={styles.cardSubtitle}>{MOLECULE_DATABASE[name].sub}</div>
-                </div>
+                <div style={styles.cardTitle}>{name}</div>
               </div>
             ))}
           </div>
         </aside>
 
         {/* Center Main WebGL Viewport Wrapper */}
-        <main style={{...styles.viewportWrapper, height: isMobile ? '400px' : 'auto', minHeight: isMobile ? '400px' : 'none'}}>
+        <main style={styles.viewportWrapper}>
           <div style={styles.canvasMetaBlock}>
             <span style={styles.categoryTag}>{currentDetails.category.toUpperCase()}</span>
             <h2 style={styles.mainCanvasTitle}>{selectedMol.toUpperCase()}</h2>
-            <p style={styles.mainCanvasSubtitle}>{currentDetails.sub}</p>
           </div>
 
-          {/* Real-Time Element Node Hover Tooltip HUD */}
           {hoveredAtom && (
             <div style={styles.hoverTooltip}>
-              <div style={{color: '#00fff5', fontWeight: 'bold', letterSpacing: '0.5px'}}>NODE TARGET: {hoveredAtom.element}</div>
-              <div style={{fontSize: '10px', color: '#6e7681', marginTop: '3px'}}>Index Vector Reference: #{hoveredAtom.index}</div>
-              <div style={styles.coordinatesRow}>
-                X: {hoveredAtom.x} | Y: {hoveredAtom.y} | Z: {hoveredAtom.z}
-              </div>
+              <div style={{color: '#00fff5', fontWeight: 'bold'}}>NODE: {hoveredAtom.element}</div>
+              <div style={styles.coordinatesRow}>X: {hoveredAtom.x} | Y: {hoveredAtom.y}</div>
             </div>
           )}
 
           {isLoading && (
             <div style={styles.loadingBox}>
               <div style={styles.spinner}></div>
-              <span style={{fontSize: '11px', color: '#00fff5', fontWeight: 'bold', letterSpacing: '1px'}}>RESOLVING CLOUD GEOMETRIES...</span>
             </div>
           )}
 
-          {/* Core Target Element Attached to Callback Ref Hooks */}
           <div ref={initCanvasRef} style={styles.canvasTarget}></div>
 
-          {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
-          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
+          <div style={styles.floatingControlsDock}>
             <div style={styles.renderToggleGroup}>
-              <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
-              <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
+              <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>B&S</button>
+              <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>SF</button>
             </div>
-            <div style={{width: '1px', background: '#21262d', margin: '0 4px'}} />
-            <button onClick={() => triggerCameraAction('reset')} style={styles.dockBtn} title="Reset Viewport">🪐</button>
-            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 14px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>
-              {isSpinning ? 'SPINNING' : 'SPIN'}
+            <button onClick={() => triggerCameraAction('reset')} style={styles.dockBtn}>🪐</button>
+            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? '#ff0055' : 'rgba(255,255,255,0.04)', fontSize: '9px', fontWeight: 'bold', width: '40px'}}>
+              {isSpinning ? 'STOP' : 'SPIN'}
             </button>
           </div>
         </main>
 
-        {/* Right Side Metrics and Applications Custom Console Panel */}
-        <aside style={{...styles.rightSidebar, width: isMobile ? '100%' : '340px', boxSizing: 'border-box', borderLeft: isMobile ? 'none' : '1px solid #1f242c', borderTop: isMobile ? '1px solid #1f242c' : 'none'}}>
+        {/* Right Sidebar - Dynamic Analytical Metric Console */}
+        <aside style={styles.rightSidebar}>
           <div style={styles.propertyWidget}>
-            <div style={styles.sidebarLabel}>Spatial Metrics Layer</div>
+            <div style={styles.sidebarLabel}>Metrics Array</div>
             <div style={styles.metricResultContainer}>
               {calculatedDistance ? (
                 <div>
-                  <div style={styles.metricValue}>{calculatedDistance} <span style={{fontSize: '16px', color: '#58a6ff'}}>Å</span></div>
-                  <div style={styles.metricDetails}>
-                    Vector Node 1: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[0]?.element || '?'}]</span> | Vector Node 2: <span style={{color:'#ff0055', fontFamily: 'monospace'}}>[{selectedAtoms[1]?.element || '?'}]</span>
-                  </div>
-
-                  <div style={styles.interpretationCard}>
-                    <span style={{ color: '#00ff96', fontWeight: 'bold', fontSize: '10px', letterSpacing: '0.5px' }}>REAL-WORLD USE CASE ANALYSIS:</span>
-                    <p style={{ margin: '6px 0 0 0', color: '#acbac7', fontSize: '11px', lineHeight: '1.45' }}>{distanceInterpretation}</p>
-                  </div>
-
-                  <button onClick={() => setSelectedAtoms([])} style={styles.clearBtn}>RESET VECTOR ARRAY</button>
+                  <div style={styles.metricValue}>{calculatedDistance} <span style={{fontSize: '12px', color: '#58a6ff'}}>Å</span></div>
+                  <div style={{fontSize:'9px', color: '#acbac7', marginTop:'4px'}}>{distanceInterpretation}</div>
+                  <button onClick={() => setSelectedAtoms([])} style={styles.clearBtn}>RESET</button>
                 </div>
               ) : (
-                <div style={styles.placeholderText}>Awaiting viewport coordinate node collection...</div>
+                <div style={styles.placeholderText}>Tap atoms to calculate...</div>
               )}
             </div>
           </div>
 
           <div style={styles.propertyWidget}>
-            <div style={styles.sidebarLabel}>Industrial & Clinical Applications</div>
-            <div style={styles.useCaseContainer}>
-              {currentDetails.useCases ? (
-                currentDetails.useCases.map((uc, idx) => (
-                  <div key={idx} style={styles.useCaseCard}>
-                    <div style={styles.useCaseLabel}>{uc.area}</div>
-                    <div style={styles.useCaseBody}>{uc.detail}</div>
-                  </div>
-                ))
-              ) : (
-                <div style={styles.placeholderText}>Parsing asset function data pipelines...</div>
-              )}
-            </div>
-          </div>
-
-          <div style={styles.propertyWidget}>
-            <div style={styles.sidebarLabel}>Telemetry Analysis Breakdown</div>
+            <div style={styles.sidebarLabel}>Specifications</div>
             <table style={styles.detailsTable}>
               <tbody>
-                <tr><td style={styles.tdLabel}>Formula Schema</td><td style={{...styles.tdValue, color: '#00fff5'}}>{currentDetails.formula}</td></tr>
-                <tr><td style={styles.tdLabel}>Molecular Mass</td><td style={styles.tdValue}>{currentDetails.weight}</td></tr>
-                <tr><td style={styles.tdLabel}>Lattice Class</td><td style={styles.tdValue}>{currentDetails.type}</td></tr>
-                <tr><td style={styles.tdLabel}>Primary Source</td><td style={styles.tdValue}>{currentDetails.source}</td></tr>
+                <tr><td style={styles.tdLabel}>Formula</td><td style={{...styles.tdValue, color: '#00fff5'}}>{currentDetails.formula}</td></tr>
+                <tr><td style={styles.tdLabel}>Mass</td><td style={styles.tdValue}>{currentDetails.weight}</td></tr>
               </tbody>
             </table>
           </div>
 
           <div style={styles.propertyWidget}>
-            <div style={styles.sidebarLabel}>Abstract Overview</div>
-            <p style={styles.descriptionParagraph}>{currentDetails.description}</p>
+            <div style={styles.sidebarLabel}>Application Target</div>
+            <div style={styles.useCaseContainer}>
+              {currentDetails.useCases ? (
+                <div style={styles.useCaseCard}>
+                  <div style={styles.useCaseLabel}>{currentDetails.useCases[0].area}</div>
+                  <div style={styles.useCaseBody}>{currentDetails.useCases[0].detail}</div>
+                </div>
+              ) : (
+                <div style={styles.placeholderText}>Parsing asset function...</div>
+              )}
+            </div>
           </div>
         </aside>
       </div>
@@ -636,60 +589,60 @@ const App = () => {
   );
 };
 
-// Layout Stylesheet Configuration
+// Desktop-in-Mobile Structural Stylesheet Configuration
 const styles = {
-  appContainer: { display: 'flex', flexDirection: 'column', backgroundColor: '#07090e', color: '#c9d1d9', fontFamily: '"Segoe UI", Roboto, Helvetica, sans-serif' },
-  topHeader: { minHeight: '70px', background: 'linear-gradient(to right, #0d1117, #0b0e14)', borderBottom: '1px solid #1f242c', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', boxShadow: '0 4px 20px rgba(0,0,0,0.4)' },
-  brandGroup: { display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', padding: '8px 0' },
-  logoBadge: { fontSize: '20px', background: 'linear-gradient(135deg, #1f2937, #111827)', padding: '6px 8px', borderRadius: '10px', border: '1px solid #2d3748' },
-  appTitle: { margin: 0, fontSize: '14px', fontWeight: '700', color: '#f0f6fc', letterSpacing: '0.8px', textTransform: 'uppercase' },
-  appSubtitle: { margin: 0, fontSize: '10px', color: '#6e7681', marginTop: '3px' },
-  statusPill: { background: 'rgba(0, 255, 150, 0.06)', border: '1px solid rgba(0,255,150,0.2)', padding: '6px 14px', borderRadius: '6px', fontSize: '10px', color: '#00ff96', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' },
-  pulseDot: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#00ff96' },
-  workspace: { flex: 1, display: 'flex' },
-  leftSidebar: { background: '#0b0e14', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' },
-  sidebarLabel: { fontSize: '10px', fontWeight: '800', color: '#00fff5', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '4px' },
-  searchBar: { width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #21262d', background: '#07090e', fontSize: '13px', color: '#f0f6fc', boxSizing: 'border-box', outline: 'none' },
-  tabGroup: { display: 'flex', background: '#07090e', padding: '3px', borderRadius: '8px', gap: '2px', border: '1px solid #1f242c', overflowX: 'auto' },
-  activeTab: { flex: 1, border: 'none', background: '#161b22', padding: '8px 10px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', color: '#00fff5', cursor: 'pointer', whiteSpace: 'nowrap' },
-  inactiveTab: { flex: 1, border: 'none', background: 'transparent', padding: '8px 10px', fontSize: '10px', color: '#8b949e', cursor: 'pointer', whiteSpace: 'nowrap' },
-  itemScrollList: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' },
-  inactiveCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', cursor: 'pointer', background: 'rgba(255,255,255,0.01)' },
-  activeCard: { display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 14px', borderRadius: '8px', background: 'linear-gradient(135deg, #161b22, #0d1117)', border: '1px solid #00fff5' },
-  cardIcon: { fontSize: '12px', background: '#07090e', padding: '6px 8px', borderRadius: '6px', border: '1px solid #21262d', color: '#00fff5' },
-  cardTitle: { fontSize: '13px', fontWeight: '600', color: '#f0f6fc' },
-  cardSubtitle: { fontSize: '11px', color: '#6e7681', marginTop: '3px' },
+  appContainer: { height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#07090e', color: '#c9d1d9', fontFamily: '"Segoe UI", Roboto, sans-serif', overflow: 'hidden' },
+  topHeader: { height: '45px', background: '#0d1117', borderBottom: '1px solid #1f242c', display: 'flex', alignItems: 'center', padding: '0 12px' },
+  brandGroup: { display: 'flex', alignItems: 'center', gap: '8px' },
+  logoBadge: { fontSize: '14px', background: '#111827', padding: '2px 4px', borderRadius: '4px', border: '1px solid #2d3748' },
+  appTitle: { margin: 0, fontSize: '11px', fontWeight: '700', color: '#f0f6fc', letterSpacing: '0.5px', textTransform: 'uppercase' },
+  appSubtitle: { margin: 0, fontSize: '8px', color: '#6e7681' },
+  workspace: { flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', width: '100vw' },
+  
+  // Left Sidebar Adjustments
+  leftSidebar: { width: '115px', background: '#0b0e14', padding: '8px', display: 'flex', flexDirection: 'column', gap: '8px', borderRight: '1px solid #1f242c' },
+  sidebarLabel: { fontSize: '8px', fontWeight: '800', color: '#00fff5', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' },
+  searchBar: { width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #21262d', background: '#07090e', fontSize: '10px', color: '#f0f6fc', boxSizing: 'border-box', outline: 'none' },
+  tabGroup: { display: 'flex', flexDirection: 'column', background: '#07090e', padding: '2px', borderRadius: '4px', gap: '2px', border: '1px solid #1f242c' },
+  activeTab: { border: 'none', background: '#161b22', padding: '4px 6px', borderRadius: '3px', fontSize: '8px', fontWeight: 'bold', color: '#00fff5', textLeft: 'left', textAlign: 'left' },
+  inactiveTab: { border: 'none', background: 'transparent', padding: '4px 6px', fontSize: '8px', color: '#8b949e', textAlign: 'left' },
+  itemScrollList: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' },
+  inactiveCard: { padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.01)', border: '1px solid transparent' },
+  activeCard: { padding: '6px 8px', borderRadius: '4px', background: '#161b22', border: '1px solid #00fff5' },
+  cardTitle: { fontSize: '10px', fontWeight: '600', color: '#f0f6fc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  
+  // Viewport Container Adjustments
   viewportWrapper: { flex: 1, position: 'relative', backgroundColor: '#07090e', minWidth: 0 },
-  canvasMetaBlock: { position: 'absolute', top: '20px', left: '20px', zIndex: 10, pointerEvents: 'none' },
-  categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '2px 6px', borderRadius: '4px' },
-  mainCanvasTitle: { margin: '6px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#f0f6fc', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' },
-  mainCanvasSubtitle: { margin: '2px 0 0 0', fontSize: '12px', color: '#8b949e' },
-  canvasTarget: { width: '100%', height: '100%', minHeight: '400px', backgroundColor: '#0a0d12' },
-  hoverTooltip: { position: 'absolute', bottom: '85px', left: '20px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', padding: '10px 14px', borderRadius: '10px', fontSize: '11px' },
-  coordinatesRow: { fontSize: '10px', fontFamily: 'monospace', color: '#00ff96', marginTop: '4px' },
-  loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'rgba(7, 9, 14, 0.95)', padding: '20px', borderRadius: '12px', border: '1px solid #00fff5' },
-  spinner: { width: '28px', height: '28px', border: '3px solid rgba(0,255,245,0.1)', borderTop: '3px solid #00fff5', borderRadius: '50%' },
-  floatingControlsDock: { position: 'absolute', zIndex: 10, display: 'flex', gap: '6px', background: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(10px)', padding: '8px 12px', borderRadius: '14px', border: '1px solid #21262d' },
-  renderToggleGroup: { display: 'flex', background: '#07090e', padding: '2px', borderRadius: '8px', border: '1px solid #21262d' },
-  activeToggleBtn: { border: 'none', background: '#1f242c', color: '#00fff5', fontSize: '10px', fontWeight: 'bold', padding: '0 10px', borderRadius: '6px', height: '28px' },
-  inactiveToggleBtn: { border: 'none', background: 'transparent', color: '#8b949e', fontSize: '10px', padding: '0 10px', borderRadius: '6px', height: '28px' },
-  dockBtn: { width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', color: '#c9d1d9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' },
-  rightSidebar: { background: '#0b0e14', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' },
+  canvasMetaBlock: { position: 'absolute', top: '10px', left: '10px', zIndex: 10, pointerEvents: 'none' },
+  categoryTag: { fontSize: '7px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '1px 4px', borderRadius: '2px' },
+  mainCanvasTitle: { margin: '2px 0 0 0', fontSize: '14px', fontWeight: '900', color: '#f0f6fc' },
+  canvasTarget: { width: '100%', height: '100%', backgroundColor: '#0a0d12' },
+  hoverTooltip: { position: 'absolute', bottom: '50px', left: '10px', zIndex: 15, background: 'rgba(7, 9, 14, 0.9)', border: '1px solid #00fff5', padding: '6px 10px', borderRadius: '6px', fontSize: '9px' },
+  coordinatesRow: { fontSize: '8px', fontFamily: 'monospace', color: '#00ff96', marginTop: '2px' },
+  loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20 },
+  spinner: { width: '16px', height: '16px', border: '2px solid rgba(0,255,245,0.1)', borderTop: '2px solid #00fff5', borderRadius: '50%' },
+  
+  // Controls Bar
+  floatingControlsDock: { position: 'absolute', zIndex: 10, display: 'flex', gap: '4px', background: 'rgba(13, 17, 23, 0.85)', padding: '4px 6px', borderRadius: '8px', border: '1px solid #21262d', bottom: '10px', left: '50%', transform: 'translateX(-50%)' },
+  renderToggleGroup: { display: 'flex', background: '#07090e', padding: '1px', borderRadius: '4px', border: '1px solid #21262d' },
+  activeToggleBtn: { border: 'none', background: '#1f242c', color: '#00fff5', fontSize: '8px', fontWeight: 'bold', padding: '0 6px', borderRadius: '3px', height: '20px' },
+  inactiveToggleBtn: { border: 'none', background: 'transparent', color: '#8b949e', fontSize: '8px', padding: '0 6px', height: '20px' },
+  dockBtn: { width: '20px', height: '20px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', color: '#c9d1d9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' },
+  
+  // Right Sidebar Adjustments
+  rightSidebar: { width: '115px', background: '#0b0e14', padding: '8px', display: 'flex', flexDirection: 'column', gap: '10px', borderLeft: '1px solid #1f242c' },
   propertyWidget: { display: 'flex', flexDirection: 'column' },
-  metricResultContainer: { border: '1px dashed #2d3748', borderRadius: '10px', padding: '16px', marginTop: '8px', textAlign: 'center', background: '#07090e' },
-  metricValue: { fontSize: '28px', fontWeight: '800', color: '#00ff96' },
-  metricDetails: { fontSize: '11px', color: '#8b949e', marginTop: '6px' },
-  interpretationCard: { marginTop: '12px', padding: '10px', backgroundColor: '#131722', borderRadius: '8px', borderLeft: '3px solid #00ff96', textAlign: 'left' },
-  placeholderText: { fontSize: '11px', color: '#556275', fontStyle: 'italic' },
-  clearBtn: { marginTop: '12px', width: '100%', padding: '8px', background: 'rgba(255,0,85,0.06)', border: '1px solid #ff0055', color: '#ff0055', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold' },
-  useCaseContainer: { display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' },
-  useCaseCard: { background: '#12161f', borderLeft: '3px solid #00fff5', borderRadius: '0 6px 6px 0', padding: '10px 12px' },
-  useCaseLabel: { fontSize: '10px', fontWeight: 'bold', color: '#58a6ff', textTransform: 'uppercase' },
-  useCaseBody: { fontSize: '11px', color: '#c9d1d9', lineHeight: '1.4', marginTop: '2px' },
-  detailsTable: { width: '100%', borderCollapse: 'collapse', marginTop: '8px' },
-  tdLabel: { padding: '8px 0', fontSize: '12px', color: '#8b949e', borderBottom: '1px solid #1f242c' },
-  tdValue: { padding: '8px 0', fontSize: '12px', color: '#f0f6fc', fontWeight: '600', textAlign: 'right', borderBottom: '1px solid #1f242c' },
-  descriptionParagraph: { fontSize: '12px', color: '#8b949e', lineHeight: '1.5', marginTop: '8px' }
+  metricResultContainer: { border: '1px dashed #2d3748', borderRadius: '6px', padding: '6px', marginTop: '4px', textAlign: 'center', background: '#07090e' },
+  metricValue: { fontSize: '14px', fontWeight: '800', color: '#00ff96' },
+  placeholderText: { fontSize: '8px', color: '#556275', fontStyle: 'italic' },
+  clearBtn: { marginTop: '4px', width: '100%', padding: '2px', background: 'rgba(255,0,85,0.06)', border: '1px solid #ff0055', color: '#ff0055', borderRadius: '3px', fontSize: '7px', fontWeight: 'bold' },
+  useCaseContainer: { display: 'flex', flexDirection: 'column', marginTop: '4px' },
+  useCaseCard: { background: '#12161f', borderLeft: '2px solid #00fff5', padding: '4px 6px' },
+  useCaseLabel: { fontSize: '7px', fontWeight: 'bold', color: '#58a6ff', textTransform: 'uppercase' },
+  useCaseBody: { fontSize: '8px', color: '#c9d1d9', lineHeight: '1.2', marginTop: '1px' },
+  detailsTable: { width: '100%', borderCollapse: 'collapse', marginTop: '4px' },
+  tdLabel: { padding: '3px 0', fontSize: '9px', color: '#8b949e', borderBottom: '1px solid #1f242c' },
+  tdValue: { padding: '3px 0', fontSize: '9px', color: '#f0f6fc', fontWeight: '600', textAlign: 'right', borderBottom: '1px solid #1f242c' }
 };
 
 export default App;
