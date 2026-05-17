@@ -270,7 +270,6 @@ const App = () => {
       }
 
       if (targetCid) {
-        // Enforce true 3D spatial calculations using conformer generation matrices from PubChem REST
         const threeDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
         
         try {
@@ -285,21 +284,9 @@ const App = () => {
           stageRef.current.loadFile(blob, { ext: "sdf" }).then((component) => renderComponent(component));
 
         } catch (fallbackError) {
-          // If 3D endpoint fails, generate a clean structural representation from conformer endpoints to prevent broken 2D flattening
-          const fallbackJSONUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/${targetCid}/description/JSON`;
-          fetch(fallbackJSONUrl)
-            .then(res => res.json())
-            .then(() => {
-              const alternative3d = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
-              stageRef.current.loadFile(alternative3d, { ext: "sdf" })
-                .then((component) => renderComponent(component))
-                .catch(() => {
-                  const twoDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=2d`;
-                  stageRef.current.loadFile(twoDUrl, { ext: "sdf" })
-                    .then((component) => renderComponent(component))
-                    .catch(() => setIsLoading(false));
-                });
-            })
+          const twoDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=2d`;
+          stageRef.current.loadFile(twoDUrl, { ext: "sdf" })
+            .then((component) => renderComponent(component))
             .catch(() => setIsLoading(false));
         }
       } else {
@@ -332,8 +319,8 @@ const App = () => {
 
       stageRef.current.handleResize();
 
-      // Universal Pointer/Click Engine covering unified mouse events and touch pointer interfaces
-      const handleSelectionProxy = (pickingProxy) => {
+      // Click Signal Engine
+      stageRef.current.signals.clicked.add((pickingProxy) => {
         if (pickingProxy && pickingProxy.atom) {
           const atom = pickingProxy.atom;
           setSelectedAtoms((prev) => {
@@ -342,23 +329,7 @@ const App = () => {
             return updated;
           });
         }
-      };
-
-      stageRef.current.signals.clicked.add(handleSelectionProxy);
-      
-      // Explicitly bridge touch interaction interfaces directly into the picking proxy calculations
-      element.addEventListener('pointerdown', (e) => {
-        if (!stageRef.current) return;
-        const canvasBounds = element.getBoundingClientRect();
-        const pointerX = e.clientX - canvasBounds.left;
-        const pointerY = e.clientY - canvasBounds.top;
-        
-        // Let NGL pick components inside the WebGL context based on viewport positions
-        const picked = stageRef.current.viewer.pick(pointerX, pointerY);
-        if (picked && picked.atom) {
-          handleSelectionProxy(picked);
-        }
-      }, { passive: true });
+      });
 
       // Interactive HUD Hover Signal Engine
       stageRef.current.signals.hovered.add((pickingProxy) => {
@@ -560,7 +531,7 @@ const App = () => {
         </aside>
 
         {/* Center Main WebGL Viewport Wrapper */}
-        <main style={{...styles.viewportWrapper, height: isMobile ? '400px' : 'auto', minHeight: isMobile ? '400px' : 'none'}}>
+        <main style={{...styles.viewportWrapper, height: isMobile ? '500px' : 'auto', minHeight: isMobile ? '500px' : 'none'}}>
           <div style={styles.canvasMetaBlock}>
             <span style={styles.categoryTag}>{currentDetails.category.toUpperCase()}</span>
             <h2 style={styles.mainCanvasTitle}>{selectedMol.toUpperCase()}</h2>
@@ -589,7 +560,7 @@ const App = () => {
           <div ref={initCanvasRef} style={styles.canvasTarget}></div>
 
           {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
-          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px', left: '50%', transform: 'translateX(-50%)'}}>
+          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', left: isMobile ? '4%' : '20px', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
             <div style={styles.renderToggleGroup}>
               <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
               <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
@@ -693,7 +664,7 @@ const styles = {
   categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '2px 6px', borderRadius: '4px' },
   mainCanvasTitle: { margin: '6px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#f0f6fc', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' },
   mainCanvasSubtitle: { margin: '2px 0 0 0', fontSize: '12px', color: '#8b949e' },
-  canvasTarget: { width: '100%', height: '100%', minHeight: '400px', backgroundColor: '#0a0d12' },
+  canvasTarget: { width: '100%', height: '100%', minHeight: '100%', backgroundColor: '#0a0d12' },
   hoverTooltip: { position: 'absolute', bottom: '85px', left: '20px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', padding: '10px 14px', borderRadius: '10px', fontSize: '11px' },
   coordinatesRow: { fontSize: '10px', fontFamily: 'monospace', color: '#00ff96', marginTop: '4px' },
   loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'rgba(7, 9, 14, 0.95)', padding: '20px', borderRadius: '12px', border: '1px solid #00fff5' },
