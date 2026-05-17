@@ -185,8 +185,7 @@ const App = () => {
   const [calculatedDistance, setCalculatedDistance] = useState(null);
   const [distanceInterpretation, setDistanceInterpretation] = useState('');
 
-  // Screen Width Responsive State Monitor Loop
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
   const stageRef = useRef(null);
   const containerRef = useRef(null);
@@ -198,11 +197,13 @@ const App = () => {
     isSpinningRef.current = isSpinning;
   }, [isSpinning]);
 
-  // Track window resizing event states dynamically
   useEffect(() => {
     const handleWindowResize = () => {
       setWindowWidth(window.innerWidth);
-      stageRef.current?.handleResize();
+      if (stageRef.current) {
+        stageRef.current.handleResize();
+        stageRef.current.autoView();
+      }
     };
     window.addEventListener('resize', handleWindowResize);
     return () => window.removeEventListener('resize', handleWindowResize);
@@ -226,7 +227,7 @@ const App = () => {
     if (containerRef.current && !stageRef.current) {
       stageRef.current = new NGL.Stage(containerRef.current, { 
         backgroundColor: '#0a0d12', 
-        sampleLevel: 4,             
+        sampleLevel: window.innerWidth < 768 ? 1 : 4, // Reduce sampling anti-aliasing load on mobile GPUs            
         impostor: true              
       });
       
@@ -241,6 +242,7 @@ const App = () => {
         fogFar: 100
       });
 
+      // Sequential triggering loops to stabilize canvas mapping bounds
       setTimeout(() => {
         if (stageRef.current) {
           stageRef.current.handleResize();
@@ -398,17 +400,26 @@ const App = () => {
     const renderComponent = (component) => {
       componentRef.current = component;
       component.addRepresentation(renderStyle, { 
-        radiusScale: renderStyle === 'spacefill' ? 1.0 : 1.6, 
-        aspectRatio: 1.6,
+        radiusScale: renderStyle === 'spacefill' ? 0.8 : 1.3, // Scaled down slightly to prevent clipping on narrow touchscreens
+        aspectRatio: 1.5,
         multipleBond: "symmetric",
         colorScheme: "element", 
-        quality: "high"
+        quality: window.innerWidth < 768 ? "low" : "high" // Optimize geometry vertices performance for mobile processors
       });
       
-      stageRef.current.autoView();
+      // Critical Force Patch: Sequentially recalibrate container visibility and camera viewport focus
       stageRef.current.handleResize();
-      setIsLoading(false);
+      stageRef.current.autoView();
       
+      // Secondary execution block to verify render dimensions are locked down securely
+      setTimeout(() => {
+        if (stageRef.current) {
+          stageRef.current.handleResize();
+          stageRef.current.autoView();
+        }
+      }, 50);
+
+      setIsLoading(false);
       if (isSpinningRef.current) {
         stageRef.current.setSpin([0, 1, 0], 0.005);
       }
@@ -519,7 +530,7 @@ const App = () => {
           </div>
 
           <div style={styles.sidebarLabel}>Lattice Asset Registry ({filteredMolecules.length})</div>
-          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '200px' : 'none'}}>
+          <div style={{...styles.itemScrollList, maxHeight: isMobile ? '180px' : 'none'}}>
             {filteredMolecules.map(name => (
               <div key={name} onClick={() => { setDynamicDetails(null); setSelectedMol(name); }} style={selectedMol === name && !dynamicDetails ? styles.activeCard : styles.inactiveCard}>
                 <div style={styles.cardIcon}>⚡</div>
@@ -533,7 +544,7 @@ const App = () => {
         </aside>
 
         {/* Center Main WebGL Viewport Wrapper */}
-        <main style={{...styles.viewportWrapper, height: isMobile ? '450px' : 'auto', minHeight: isMobile ? '450px' : 'none'}}>
+        <main style={{...styles.viewportWrapper, height: isMobile ? '400px' : 'auto', minHeight: isMobile ? '400px' : 'none'}}>
           <div style={styles.canvasMetaBlock}>
             <span style={styles.categoryTag}>{currentDetails.category.toUpperCase()}</span>
             <h2 style={styles.mainCanvasTitle}>{selectedMol.toUpperCase()}</h2>
@@ -567,14 +578,14 @@ const App = () => {
           <div ref={containerRef} style={styles.canvasTarget}></div>
 
           {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
-          <div style={{...styles.floatingControlsDock, width: isMobile ? '90%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
+          <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
             <div style={styles.renderToggleGroup}>
               <button onClick={() => setRenderStyle('ball+stick')} style={renderStyle === 'ball+stick' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Ball & Stick</button>
               <button onClick={() => setRenderStyle('spacefill')} style={renderStyle === 'spacefill' ? styles.activeToggleBtn : styles.inactiveToggleBtn}>Spacefill</button>
             </div>
             <div style={{width: '1px', background: '#21262d', margin: '0 4px'}} />
             <button onClick={() => triggerCameraAction('reset')} style={styles.dockBtn} title="Reset Viewport">🪐</button>
-            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 12px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>
+            <button onClick={() => triggerCameraAction('spin')} style={{...styles.dockBtn, background: isSpinning ? 'linear-gradient(135deg, #ff0055, #990033)' : 'rgba(255,255,255,0.04)', width: 'auto', padding: '0 14px', borderRadius: '12px', border: isSpinning ? '1px solid #ff0055' : '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>
               {isSpinning ? 'SPINNING' : 'SPIN'}
             </button>
           </div>
