@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as NGL from 'ngl';
 
 // Premium Visual Molecular Database with dedicated Application/Use-Case datasets
@@ -172,7 +172,7 @@ const MOLECULE_DATABASE = {
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('All');
-  const [selectedMol, setSelectedMol] = useState('Caffeine');
+  const [selectedMol, setSelectedMol] = useState('Glucose');
   const [searchQuery, setSearchQuery] = useState('');
   const [dynamicDetails, setDynamicDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -188,7 +188,6 @@ const App = () => {
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
   const stageRef = useRef(null);
-  const containerRef = useRef(null);
   const componentRef = useRef(null);
   const distanceRepRef = useRef(null);
 
@@ -202,7 +201,6 @@ const App = () => {
       setWindowWidth(window.innerWidth);
       if (stageRef.current) {
         stageRef.current.handleResize();
-        stageRef.current.autoView();
       }
     };
     window.addEventListener('resize', handleWindowResize);
@@ -222,33 +220,104 @@ const App = () => {
     ]
   };
 
-  // 1. Core WebGL Lifecycle Mount Container
-  useEffect(() => {
-    if (containerRef.current && !stageRef.current) {
-      stageRef.current = new NGL.Stage(containerRef.current, { 
+  // 1. Core Molecular Component Geometry Rendering Helper
+  const renderComponent = useCallback((component) => {
+    componentRef.current = component;
+    component.addRepresentation(renderStyle, { 
+      radiusScale: renderStyle === 'spacefill' ? 0.8 : 1.3, 
+      aspectRatio: 1.5,
+      multipleBond: "symmetric",
+      colorScheme: "element", 
+      quality: window.innerWidth < 768 ? "low" : "high"
+    });
+    
+    stageRef.current.handleResize();
+    stageRef.current.autoView();
+    
+    setTimeout(() => {
+      if (stageRef.current) {
+        stageRef.current.handleResize();
+        stageRef.current.autoView();
+      }
+    }, 60);
+
+    setIsLoading(false);
+    if (isSpinningRef.current) {
+      stageRef.current.setSpin([0, 1, 0], 0.005);
+    }
+  }, [renderStyle]);
+
+  // 2. Extracted Core Structural Engine Runner wrapped with useCallback
+  const loadStructure = useCallback(async () => {
+    if (!stageRef.current) return;
+    setIsLoading(true);
+    try {
+      if (distanceRepRef.current) distanceRepRef.current = null;
+      stageRef.current.removeAllComponents();
+      setSelectedAtoms([]);
+      setCalculatedDistance(null);
+      setDistanceInterpretation('');
+      componentRef.current = null;
+      
+      let targetCid = MOLECULE_DATABASE[selectedMol]?.cid;
+      
+      if (!targetCid) {
+        const searchRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(selectedMol)}/property/Title/JSON`);
+        const searchData = await searchRes.json();
+        if (searchData.PropertyTable?.Properties[0]) {
+          targetCid = searchData.PropertyTable.Properties[0].CID;
+        }
+      }
+
+      if (targetCid) {
+        const threeDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
+        
+        try {
+          const checkResponse = await fetch(threeDUrl);
+          const checkText = await checkResponse.text();
+          
+          if (!checkText || checkText.trim() === "" || checkText.includes("Status: Status_NoData") || checkText.includes("Fault")) {
+            throw new Error("No 3D asset hosted");
+          }
+
+          const blob = new Blob([checkText], { type: 'text/plain' });
+          stageRef.current.loadFile(blob, { ext: "sdf" }).then((component) => renderComponent(component));
+
+        } catch (fallbackError) {
+          const twoDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=2d`;
+          stageRef.current.loadFile(twoDUrl, { ext: "sdf" })
+            .then((component) => renderComponent(component))
+            .catch(() => setIsLoading(false));
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch (err) {
+      setIsLoading(false);
+    }
+  }, [selectedMol, renderComponent]);
+
+  // Safe callback ref strategy for perfect Canvas DOM initialization
+  const initCanvasRef = (element) => {
+    if (element && !stageRef.current) {
+      const isMobileDevice = window.innerWidth < 768;
+      
+      stageRef.current = new NGL.Stage(element, { 
         backgroundColor: '#0a0d12', 
-        sampleLevel: window.innerWidth < 768 ? 1 : 4, // Reduce sampling anti-aliasing load on mobile GPUs            
-        impostor: true              
+        sampleLevel: isMobileDevice ? 0 : 3, 
+        impostor: !isMobileDevice 
       });
       
       stageRef.current.setParameters({
         lightColor: '#ffffff',
-        lightIntensity: 1.1,
+        lightIntensity: 1.0,
         ambientColor: '#2b3442',
-        ambientIntensity: 0.5,
+        ambientIntensity: 0.6,
         clipNear: 0,
-        clipFar: 100,
-        fogNear: 55,
-        fogFar: 100
+        clipFar: 100
       });
 
-      // Sequential triggering loops to stabilize canvas mapping bounds
-      setTimeout(() => {
-        if (stageRef.current) {
-          stageRef.current.handleResize();
-          stageRef.current.autoView();
-        }
-      }, 150);
+      stageRef.current.handleResize();
 
       // Click Signal Engine
       stageRef.current.signals.clicked.add((pickingProxy) => {
@@ -277,10 +346,14 @@ const App = () => {
           setHoveredAtom(null);
         }
       });
+      
+      setTimeout(() => {
+        loadStructure();
+      }, 50);
     }
-  }, []);
+  };
 
-  // 2. Clear & Redraw Metric Measurement Layers
+  // 3. Clear & Redraw Metric Measurement Layers
   useEffect(() => {
     if (distanceRepRef.current && componentRef.current) {
       try {
@@ -338,96 +411,10 @@ const App = () => {
     }
   }, [selectedAtoms]);
 
-  // 3. Asynchronous Data Ingestion Engine & Structure Drawing
+  // Trigger whenever structural choice dependencies update
   useEffect(() => {
-    if (!stageRef.current) return;
-
-    const loadStructure = async () => {
-      setIsLoading(true);
-      try {
-        if (distanceRepRef.current) distanceRepRef.current = null;
-        stageRef.current.removeAllComponents();
-        setSelectedAtoms([]);
-        setCalculatedDistance(null);
-        setDistanceInterpretation('');
-        componentRef.current = null;
-        
-        let targetCid = MOLECULE_DATABASE[selectedMol]?.cid;
-        
-        if (!targetCid) {
-          const searchRes = await fetch(`https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(selectedMol)}/property/Title/JSON`);
-          const searchData = await searchRes.json();
-          if (searchData.PropertyTable?.Properties[0]) {
-            targetCid = searchData.PropertyTable.Properties[0].CID;
-          }
-        }
-
-        if (targetCid) {
-          const threeDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=3d`;
-          
-          try {
-            const checkResponse = await fetch(threeDUrl);
-            const checkText = await checkResponse.text();
-            
-            if (!checkText || checkText.trim() === "" || checkText.includes("Status: Status_NoData") || checkText.includes("Fault")) {
-              throw new Error("No 3D asset hosted for this element profile");
-            }
-
-            const blob = new Blob([checkText], { type: 'text/plain' });
-            stageRef.current.loadFile(blob, { ext: "sdf" })
-              .then((component) => renderComponent(component));
-
-          } catch (fallbackError) {
-            console.warn(`3D source layout unavailable for ${selectedMol}. Engaging automated 2D coordinates conversion fallback...`);
-            
-            const twoDUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/CID/${targetCid}/record/SDF/?record_type=2d`;
-            stageRef.current.loadFile(twoDUrl, { ext: "sdf" })
-              .then((component) => renderComponent(component))
-              .catch((err) => {
-                console.error("Critical rendering exception across all files pipelines:", err);
-                setIsLoading(false);
-              });
-          }
-        } else {
-          setIsLoading(false);
-        }
-      } catch (err) {
-        console.error("Pipeline breakdown:", err);
-        setIsLoading(false);
-      }
-    };
-
-    const renderComponent = (component) => {
-      componentRef.current = component;
-      component.addRepresentation(renderStyle, { 
-        radiusScale: renderStyle === 'spacefill' ? 0.8 : 1.3, // Scaled down slightly to prevent clipping on narrow touchscreens
-        aspectRatio: 1.5,
-        multipleBond: "symmetric",
-        colorScheme: "element", 
-        quality: window.innerWidth < 768 ? "low" : "high" // Optimize geometry vertices performance for mobile processors
-      });
-      
-      // Critical Force Patch: Sequentially recalibrate container visibility and camera viewport focus
-      stageRef.current.handleResize();
-      stageRef.current.autoView();
-      
-      // Secondary execution block to verify render dimensions are locked down securely
-      setTimeout(() => {
-        if (stageRef.current) {
-          stageRef.current.handleResize();
-          stageRef.current.autoView();
-        }
-      }, 50);
-
-      setIsLoading(false);
-      if (isSpinningRef.current) {
-        stageRef.current.setSpin([0, 1, 0], 0.005);
-      }
-    };
-
     loadStructure();
-    
-  }, [selectedMol, renderStyle]); 
+  }, [loadStructure]);
 
   // 4. Global Animation Toggle Controller Loop
   useEffect(() => {
@@ -551,12 +538,6 @@ const App = () => {
             <p style={styles.mainCanvasSubtitle}>{currentDetails.sub}</p>
           </div>
 
-          {!isMobile && (
-            <div style={styles.floatingHelpBadge}>
-              ⚙️ OPERATIONAL: Left-click + drag mouse array to rotate lattice space. Choose any 2 atoms sequentially to render distance metrics.
-            </div>
-          )}
-
           {/* Real-Time Element Node Hover Tooltip HUD */}
           {hoveredAtom && (
             <div style={styles.hoverTooltip}>
@@ -575,7 +556,8 @@ const App = () => {
             </div>
           )}
 
-          <div ref={containerRef} style={styles.canvasTarget}></div>
+          {/* Core Target Element Attached to Callback Ref Hooks */}
+          <div ref={initCanvasRef} style={styles.canvasTarget}></div>
 
           {/* Action Control Overlays & Dynamic Render Engine Switcher Dock */}
           <div style={{...styles.floatingControlsDock, width: isMobile ? '92%' : 'auto', boxSizing: 'border-box', justifyContent: 'center', bottom: '15px'}}>
@@ -677,15 +659,14 @@ const styles = {
   cardIcon: { fontSize: '12px', background: '#07090e', padding: '6px 8px', borderRadius: '6px', border: '1px solid #21262d', color: '#00fff5' },
   cardTitle: { fontSize: '13px', fontWeight: '600', color: '#f0f6fc' },
   cardSubtitle: { fontSize: '11px', color: '#6e7681', marginTop: '3px' },
-  viewportWrapper: { flex: 1, position: 'relative', background: 'radial-gradient(circle at center, #101520 0%, #07090e 100%)', minWidth: 0 },
+  viewportWrapper: { flex: 1, position: 'relative', backgroundColor: '#07090e', minWidth: 0 },
   canvasMetaBlock: { position: 'absolute', top: '20px', left: '20px', zIndex: 10, pointerEvents: 'none' },
   categoryTag: { fontSize: '9px', fontWeight: 'bold', background: 'rgba(0,255,245,0.08)', color: '#00fff5', border: '1px solid rgba(0,255,245,0.2)', padding: '2px 6px', borderRadius: '4px' },
   mainCanvasTitle: { margin: '6px 0 0 0', fontSize: '24px', fontWeight: '900', color: '#f0f6fc', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' },
   mainCanvasSubtitle: { margin: '2px 0 0 0', fontSize: '12px', color: '#8b949e' },
-  floatingHelpBadge: { position: 'absolute', top: '20px', right: '20px', zIndex: 10, background: 'rgba(13, 17, 23, 0.8)', border: '1px solid #21262d', padding: '10px 14px', borderRadius: '12px', fontSize: '11px', maxWidth: '300px', lineHeight: '1.4' },
+  canvasTarget: { width: '100%', height: '100%', minHeight: '400px', backgroundColor: '#0a0d12' },
   hoverTooltip: { position: 'absolute', bottom: '85px', left: '20px', zIndex: 15, background: 'rgba(7, 9, 14, 0.92)', border: '1px solid #00fff5', padding: '10px 14px', borderRadius: '10px', fontSize: '11px' },
   coordinatesRow: { fontSize: '10px', fontFamily: 'monospace', color: '#00ff96', marginTop: '4px' },
-  canvasTarget: { width: '100%', height: '100%' },
   loadingBox: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: 'rgba(7, 9, 14, 0.95)', padding: '20px', borderRadius: '12px', border: '1px solid #00fff5' },
   spinner: { width: '28px', height: '28px', border: '3px solid rgba(0,255,245,0.1)', borderTop: '3px solid #00fff5', borderRadius: '50%' },
   floatingControlsDock: { position: 'absolute', zIndex: 10, display: 'flex', gap: '6px', background: 'rgba(13, 17, 23, 0.85)', backdropFilter: 'blur(10px)', padding: '8px 12px', borderRadius: '14px', border: '1px solid #21262d' },
