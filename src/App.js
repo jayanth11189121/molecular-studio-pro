@@ -161,7 +161,7 @@ const MOLECULE_DATABASE = {
     type: 'Closed Cage Pure Carbon', 
     source: 'Laser Ablation of Graphite', 
     cid: '123591', 
-    description: 'A pure carbon spherical configuration shaped like a soccer ball composed of 20 hexagons and 12 pentagons, displaying supreme structural structural symmetries.',
+    description: 'A pure carbon spherical configuration shaped like a soccer ball composed of 20 hexagons and 12 pentagons, displaying supreme structural symmetries.',
     useCases: [
       { area: 'Drug Delivery', detail: 'Engineered as a molecular structural hollow cage to safely guide therapeutic chemicals past cell boundaries.' },
       { area: 'Optics Technology', detail: 'Utilized in high-powered defensive laser protective optics due to non-linear light absorption indexes.' },
@@ -287,6 +287,10 @@ const App = () => {
   const [quizScore, setQuizScore] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
 
+  // Client-Side AI Insight Engine States
+  const [aiInsights, setAiInsights] = useState(null);
+  const [isAiAnalyzing, setIsAiAnalyzing] = useState(false);
+
   const stageRef = useRef(null);
   const componentRef = useRef(null);
   const distanceRepRef = useRef(null);
@@ -320,7 +324,39 @@ const App = () => {
     ]
   };
 
-  // 1. Core Molecular Component Geometry Rendering Helper
+  // Topic-Wise AI Analysis Simulator
+  const runAiAnalysis = useCallback((moleculeName) => {
+    setIsAiAnalyzing(true);
+    setAiInsights(null);
+    
+    setTimeout(() => {
+      const databaseMatch = MOLECULE_DATABASE[moleculeName] || dynamicDetails;
+      
+      if (databaseMatch) {
+        setAiInsights({
+          modelUsed: "Gemini-Pro-Bio-v2 (API Link Simulated)",
+          structuralAnalysis: `The chemical structure ${databaseMatch.formula || 'unspecified'} acts as a high-affinity ligand within its stereochemical class. Its specific atomic arrangement dictates narrow spatial constraints across receptor docking pockets.`,
+          bioMechanism: databaseMatch.description || "Dynamic cloud properties registered for predictive biological interactions.",
+          safetyProfile: `Handled standardly as an active chemical compound intermediate. Prevent uncontrolled exposure across non-sterile target biological pathways.`
+        });
+      } else {
+        setAiInsights({
+          modelUsed: "Gemini-Pro-Bio-v2 (API Link Simulated)",
+          structuralAnalysis: `Custom entry resolved via external cloud schema parameters. The molecule presents standard structural covalent bounds configurations.`,
+          bioMechanism: `Active tracking indicates interaction behavior linked directly to structural valence density mapping.`,
+          safetyProfile: `Observe conventional materials safety data handling protocols (MSDS verification recommended).`
+        });
+      }
+      setIsAiAnalyzing(false);
+    }, 1100);
+  }, [dynamicDetails]);
+
+  // Trigger AI analysis on active structural variation
+  useEffect(() => {
+    runAiAnalysis(selectedMol);
+  }, [selectedMol, runAiAnalysis]);
+
+  // Core Molecular Component Geometry Rendering Helper
   const renderComponent = useCallback((component) => {
     componentRef.current = component;
     component.addRepresentation(renderStyle, { 
@@ -347,7 +383,7 @@ const App = () => {
     }
   }, [renderStyle]);
 
-  // 2. Extracted Core Structural Engine Runner wrapped with useCallback
+  // Extracted Core Structural Engine Runner wrapped with useCallback
   const loadStructure = useCallback(async () => {
     if (!stageRef.current) return;
     setIsLoading(true);
@@ -453,7 +489,7 @@ const App = () => {
     }
   };
 
-  // 3. Clear & Redraw Metric Measurement Layers
+  // Clear & Redraw Metric Measurement Layers
   useEffect(() => {
     if (distanceRepRef.current && componentRef.current) {
       try {
@@ -516,7 +552,7 @@ const App = () => {
     loadStructure();
   }, [loadStructure]);
 
-  // 4. Global Animation Toggle Controller Loop
+  // Global Animation Toggle Controller Loop
   useEffect(() => {
     if (!stageRef.current) return;
     if (isSpinning) {
@@ -756,7 +792,7 @@ const App = () => {
           
           {/* Main Molecule Property Spec Cards */}
           <div style={styles.detailHeader}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', justifycontent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <h2 style={styles.detailTitle}>{selectedMol}</h2>
                 <div style={styles.detailSub}>{currentDetails.sub}</div>
@@ -782,6 +818,46 @@ const App = () => {
                 <div style={styles.useCaseDetail}>{uc.detail}</div>
               </div>
             ))}
+          </div>
+
+          {/* ========================================================== */}
+          {/* Premium Topic-Wise AI Explanation Interface */}
+          {/* ========================================================== */}
+          <div style={styles.aiWidgetCard}>
+            <div style={styles.aiHeaderRow}>
+              <h3 style={styles.aiWidgetTitle}>🤖 Topic-Wise AI Explanation Engine</h3>
+              <span style={{ ...styles.aiBadge, color: isAiAnalyzing ? '#ff2a6d' : '#00ffcc' }}>
+                {isAiAnalyzing ? "PROCESSING..." : "MODEL ACTIVE"}
+              </span>
+            </div>
+
+            {isAiAnalyzing ? (
+              <div style={styles.aiLoadingFrame}>
+                <div style={styles.aiMiniSpinner} />
+                <span style={styles.aiLoadingText}>AI agent parsing structural properties...</span>
+              </div>
+            ) : aiInsights ? (
+              <div style={styles.aiContentContainer}>
+                <div>
+                  <div style={styles.aiSectionTitle}>🧬 STRUCTURAL ANALYSIS COGNITION</div>
+                  <p style={styles.aiSectionBody}>{aiInsights.structuralAnalysis}</p>
+                </div>
+
+                <div style={styles.aiHighlightedBlock}>
+                  <div style={{ ...styles.aiSectionTitle, color: '#00ffcc' }}>💡 BIOLOGICAL MECHANISM TARGETING</div>
+                  <p style={{ ...styles.aiSectionBody, color: '#94a3b8' }}>{aiInsights.bioMechanism}</p>
+                </div>
+
+                <div>
+                  <div style={{ ...styles.aiSectionTitle, color: '#e2e8f0' }}>⚠️ CLINICAL SAFETY PROFILE</div>
+                  <p style={{ ...styles.aiSectionBody, color: '#64748b' }}>{aiInsights.safetyProfile}</p>
+                </div>
+
+                <div style={styles.aiFooter}>
+                  Engine Backend: <span style={{ color: '#94a3b8' }}>{aiInsights.modelUsed}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* ========================================================== */}
@@ -1201,12 +1277,96 @@ const styles = {
     color: '#94a3b8',
     lineHeight: '1.4'
   },
+  aiWidgetCard: {
+    backgroundColor: '#0a0d12',
+    border: '1px solid #1f293d',
+    borderRadius: '12px',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+    marginTop: '4px'
+  },
+  aiHeaderRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid #1f293d',
+    paddingBottom: '8px'
+  },
+  aiWidgetTitle: {
+    color: '#00ffcc',
+    margin: 0,
+    fontSize: '0.92rem',
+    fontWeight: 'bold'
+  },
+  aiBadge: {
+    fontSize: '0.68rem',
+    backgroundColor: '#1e293b',
+    padding: '2px 6px',
+    borderRadius: '4px',
+    fontFamily: 'monospace',
+    fontWeight: 'bold'
+  },
+  aiLoadingFrame: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '20px 0',
+    gap: '10px'
+  },
+  aiMiniSpinner: {
+    width: '20px',
+    height: '20px',
+    border: '2px solid #1f293d',
+    borderTop: '2px solid #00ffcc',
+    borderRadius: '50%',
+    animation: 'spin 0.6s linear infinite'
+  },
+  aiLoadingText: {
+    color: '#94a3b8',
+    fontSize: '0.8rem',
+    fontStyle: 'italic'
+  },
+  aiContentContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    fontSize: '0.82rem'
+  },
+  aiSectionTitle: {
+    color: '#ff2a6d',
+    fontWeight: 'bold',
+    fontSize: '0.75rem',
+    marginBottom: '3px',
+    letterSpacing: '0.5px'
+  },
+  aiSectionBody: {
+    margin: 0,
+    color: '#cbd5e1',
+    lineHeight: '1.4'
+  },
+  aiHighlightedBlock: {
+    backgroundColor: '#111c2e',
+    padding: '10px',
+    borderRadius: '6px',
+    borderLeft: '3px solid #00ffcc'
+  },
+  aiFooter: {
+    fontSize: '0.65rem',
+    color: '#475569',
+    textAlign: 'right',
+    marginTop: '4px',
+    borderTop: '1px solid #1f293d',
+    paddingTop: '6px'
+  },
   quizWrapperCard: {
     backgroundColor: '#0a0d12',
     border: '1px solid #1f293d',
     borderRadius: '12px',
     padding: '20px',
-    marginTop: '12px',
+    marginTop: '4px',
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)'
   },
   quizHeaderRow: {
@@ -1220,7 +1380,7 @@ const styles = {
   quizWidgetTitle: {
     color: '#00ffcc', 
     margin: 0, 
-    fontSize: '1rem', 
+    fontSize: '0.95rem', 
     fontWeight: 'bold'
   },
   quizCounterText: {
